@@ -1,0 +1,36 @@
+baseURL: 'https://你的GitHub用户名.github.io/'
+title: '技术复兴之路'
+theme: 'stack'
+defaultContentLanguage: 'zh'
+hasCJKLanguage: true
+
+params:
+  mainSections:
+    - posts
+  description: 'C++/Python技术笔记与成长记录'
+  stack:
+    layout:
+      home: home
+      list: posts
+      single: single
+    showCategories: true
+    showTags: true
+    menu:
+      - name: 文章
+        url: posts/
+      - name: 项目
+        url: projects/
+      - name: 关于
+        url: about/
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+      
+
+# 添加默认内容语言配置
+languages:
+  zh:
+    languageName: 中文
+    weight: 1
