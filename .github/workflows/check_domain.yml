@@ -1,0 +1,23 @@
+# .github/workflows/check-domain.yml
+name: Domain Check
+on:
+  schedule:
+    - cron: '0 12 * * *'  # 每天UTC时间12点运行
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify HTTPS
+      run: |
+        if ! curl -sfI https://${{ vars.DOMAIN }} | grep "200 OK"; then
+          echo "::error::HTTPS check failed!"
+          exit 1
+        fi
+    - name: Check DNS
+      run: |
+        if ! dig +short ${{ vars.DOMAIN}} | grep -q 'github.io'; then
+          echo "::error::DNS resolution error"
+          exit 1
+        fi
