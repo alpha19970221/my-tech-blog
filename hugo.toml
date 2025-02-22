@@ -1,4 +1,14 @@
-baseURL = 'https://example.org/'
-languageCode = 'en-us'
+baseURL = 'https://alpha19970221.github.io/my-tech-blog/'
+languageCode = 'zh-CN'
 title = 'My New Hugo Site'
 theme = "stack"
+
+[build]
+  publishDir = 'public'
+  
+[params]
+  description = "技术博客"
+  
+[markup]
+  [markup.highlight]
+    style = 'github'
