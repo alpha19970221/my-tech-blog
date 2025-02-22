@@ -3,6 +3,11 @@ languageCode = 'zh-CN'
 title = 'My New Hugo Site'
 theme = "stack"
 
+[security]
+  [security.headers]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+	
 [build]
   publishDir = 'public'
   
@@ -12,3 +17,15 @@ theme = "stack"
 [markup]
   [markup.highlight]
     style = 'github'
+	
+[outputs]
+  [outputs.home]
+    mediaType = "text/html"
+    baseName = "index"
+    isHTML = true
+    permalink = "/:slug/"
+
+[imaging]
+  anchor = "smart"
+  quality = 85
+  resampleFilter = "CatmullRom"
