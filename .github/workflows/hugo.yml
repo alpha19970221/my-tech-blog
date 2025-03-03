@@ -2,10 +2,7 @@ name: GitHub Pages
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'content/posts/**/*.md'
+    branches: [main]
 
 jobs:
   deploy:
