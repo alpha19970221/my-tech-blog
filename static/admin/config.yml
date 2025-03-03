@@ -1,9 +1,10 @@
 backend:
   name: github
-  repo: yourusername/yourrepo  # 替换为你的 GitHub 用户名和仓库名
+  repo: Alpha19970221/my-tech-blog  # 替换为你的 GitHub 用户名和仓库名
   branch: main                 # 如果你使用的分支不是 main，请修改为相应分支
   auth_scope: repo             # 允许 NetlifyCMS 操作你的仓库
-  client_id: Ov23li5B3VKf6Y1lfyZr
+media_folder: "static/uploads"
+public_folder: "/static/uploads"
 collections:
   - name: "posts"
     label: "文章"
