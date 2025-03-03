@@ -4,9 +4,7 @@ backend:
   branch: main                      # 如你的分支不是 main，请修改为相应分支
   auth_scope: repo                  # 允许 Decap CMS 操作你的仓库
 
-media_folder: "static/uploads"      # 在仓库中的存放路径（源代码）
-public_folder: "/static/uploads"    # 构建后站点中访问该媒体文件的路径
-media_library: {}                   # 如果不使用第三方媒体库，可设为空对象
+media_folder: "assets/uploads"      # 在仓库中的存放路径（源代码）
 
 collections:
   - name: "posts"
