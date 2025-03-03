@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import CMS from 'netlify-cms-app'
+import CMS from 'decap-cms-app'
 
 // 定义你的预览组件，比如用于文章集合的预览
 const PostPreview = ({ entry, widgetFor }) => {
