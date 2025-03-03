@@ -1,18 +1,28 @@
-// 注入外部 CSS 高亮样式（例如 Prism Tomorrow 主题）
-DecapCMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
-// 使用原生 JavaScript 创建预览组件
-function PostPreview(props) {
-  // 获取文章数据
-  var data = props.entry.toJS();
-  return React.createElement(
-    "div",
-    { style: { padding: "1em", fontFamily: "Arial, sans-serif" } },
-    React.createElement("h1", null, data.title),
-    React.createElement("p", null, data.date),
-    React.createElement("div", null, props.widgetFor("body"))
+// 如果你更倾向于直接注入自定义样式，可以使用以下代码（取消注释并删除上面的注册方式）：
+
+DecapCMS.registerPreviewStyle(`
+  pre, code {
+    font-family: "Fira Code", monospace;
+    background-color: #2d2d2d;
+    color: #ccc;
+    padding: 1em;
+    border-radius: 4px;
+    overflow: auto;
+  }
+`, { raw: true });
+
+// 使用 React 语法注册预览模板
+const PostPreview = ({ entry, widgetFor }) => {
+  const data = entry.toJS();
+  return (
+    <div style={{ padding: '1em', fontFamily: 'Arial, sans-serif' }}>
+      <h1>{data.title}</h1>
+      <p>{data.date}</p>
+      <div>{widgetFor('body')}</div>
+    </div>
   );
-}
+};
 
-// 注册预览模板，'posts' 应与 config.yml 中定义的集合名称一致
-DecapCMS.registerPreviewTemplate("posts", PostPreview);
+// 注册预览模板，'posts' 对应 config.yml 中定义的集合名称
+DecapCMS.registerPreviewTemplate('posts', PostPreview);
