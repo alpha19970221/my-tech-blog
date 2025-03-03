@@ -1,34 +1,20 @@
-// 注入外部 PrismJS 样式
+// 确保先加载 Decap CMS 和 React（Decap CMS 内置 React 时通常会自动加载）
 CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
-// 使用原生 JavaScript 创建预览组件
+// 使用 React.createElement 创建预览组件
 function PostPreview(props) {
   var data = props.entry.toJS();
-  var container = document.createElement('div');
-  container.style.padding = '1em';
-  container.style.fontFamily = 'Arial, sans-serif';
-
-  var titleEl = document.createElement('h1');
-  titleEl.textContent = data.title;
-  container.appendChild(titleEl);
-
-  var dateEl = document.createElement('p');
-  dateEl.textContent = data.date;
-  container.appendChild(dateEl);
-
-  var bodyContainer = document.createElement('div');
-  bodyContainer.innerHTML = props.widgetFor('body');
-  container.appendChild(bodyContainer);
-
-  // 调用 PrismJS 高亮代码
-  setTimeout(function() {
-    if (window.Prism) {
-      window.Prism.highlightAll();
-    }
-  }, 0);
-
-  return container;
+  return React.createElement(
+    "div",
+    { style: { padding: "1em", fontFamily: "Arial, sans-serif" } },
+    React.createElement("h1", null, data.title),
+    React.createElement("p", null, data.date),
+    React.createElement("div", {
+      // 使用 dangerouslySetInnerHTML 将预览内容渲染成 HTML
+      dangerouslySetInnerHTML: { __html: props.widgetFor("body") }
+    })
+  );
 }
 
-// 注册预览模板，集合名称需与 config.yml 中一致
+// 注册预览模板，确保 'posts' 与 config.yml 中集合名称一致
 CMS.registerPreviewTemplate("posts", PostPreview);
