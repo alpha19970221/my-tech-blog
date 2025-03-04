@@ -6,13 +6,48 @@
   <title>内容管理</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- 添加 Prism.js 样式 -->
+  <!-- 添加 Prism.js CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  
+  <!-- 自定义样式 -->
+  <style>
+    /* 确保代码块样式清晰可见 */
+    .cms-preview-pane pre[class*="language-"] {
+      background: #2d2d2d;
+      color: #ccc;
+      padding: 1em;
+      margin: 1em 0;
+      border-radius: 5px;
+      overflow: auto;
+    }
+
+    .cms-preview-pane code[class*="language-"] {
+      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+      text-align: left;
+      white-space: pre;
+      word-spacing: normal;
+      word-break: normal;
+      word-wrap: normal;
+      line-height: 1.5;
+      tab-size: 4;
+    }
+
+    /* 确保代码块在编辑器中的显示 */
+    .cms-editor-preview pre {
+      background: #2d2d2d;
+      color: #ccc;
+      padding: 1em;
+      margin: 1em 0;
+      border-radius: 5px;
+      overflow: auto;
+    }
+  </style>
 </head>
 <body>
+  <!-- Decap CMS -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
   
-  <!-- 添加 Prism.js 脚本 -->
+  <!-- Prism.js 和语言支持 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
@@ -20,23 +55,111 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
   
   <script>
+    // 测试 Prism.js 是否加载
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof Prism !== 'undefined') {
+        console.log('Prism.js 已加载');
+      } else {
+        console.error('Prism.js 未加载');
+      }
+    });
+    
+    // 定义辅助函数去高亮代码块
+    function highlightCodeBlocks() {
+      console.log("尝试高亮代码...");
+      const previewPane = document.querySelector('.cms-preview-pane');
+      if (!previewPane) {
+        console.log('预览窗格未找到，稍后重试');
+        return;
+      }
+      
+      // 查找所有代码块
+      const codeBlocks = previewPane.querySelectorAll('pre code');
+      console.log(`找到 ${codeBlocks.length} 个代码块`);
+      
+      // 处理没有语言类的代码块
+      codeBlocks.forEach(block => {
+        if (!block.className.includes('language-')) {
+          // 尝试从内容的第一行解析语言
+          const content = block.textContent.trim();
+          let language = 'javascript'; // 默认语言
+          
+          // 如果父元素有类名可能包含语言信息
+          const parent = block.parentElement;
+          if (parent && parent.className) {
+            const match = parent.className.match(/language-(\w+)/);
+            if (match) {
+              language = match[1];
+            }
+          }
+          
+          // 如果没有找到语言，尝试从代码内容第一行找
+          if (content.startsWith('function') || content.includes('const ') || content.includes('let ')) {
+            language = 'javascript';
+          } else if (content.includes('def ') || content.includes('import ') || content.includes('#') && content.includes(':')) {
+            language = 'python';
+          } else if (content.includes('{') && content.includes(':') && !content.includes('function')) {
+            language = 'css';
+          }
+          
+          // 添加语言类
+          block.className = `language-${language}`;
+          parent.className = `language-${language}`;
+        }
+        
+        // 应用高亮
+        Prism.highlightElement(block);
+      });
+    }
+    
+    // 监听 DOM 变化以检测新增的代码块
+    function setupMutationObserver() {
+      // 如果浏览器支持 MutationObserver
+      if (window.MutationObserver) {
+        const observer = new MutationObserver(function(mutations) {
+          // 如果 DOM 发生变化，尝试高亮代码
+          highlightCodeBlocks();
+        });
+        
+        // 开始观察预览窗格
+        const previewPane = document.querySelector('.cms-editor-preview');
+        if (previewPane) {
+          observer.observe(previewPane, { 
+            childList: true,
+            subtree: true 
+          });
+          console.log('已设置 MutationObserver 监听预览窗格变化');
+        } else {
+          // 如果预览窗格还不存在，稍后再试
+          setTimeout(setupMutationObserver, 1000);
+        }
+      } else {
+        // 后备方案：定期尝试高亮
+        setInterval(highlightCodeBlocks, 2000);
+      }
+    }
+    
     // 自定义预览模板
     const PostPreview = createClass({
       componentDidMount() {
-        this.highlightCode();
+        console.log('预览组件已挂载');
+        // 组件挂载后尝试高亮代码
+        setTimeout(() => {
+          highlightCodeBlocks();
+        }, 500);
       },
       
       componentDidUpdate() {
-        this.highlightCode();
-      },
-      
-      highlightCode() {
-        // 确保 Prism 存在并且能访问 DOM
-        if (typeof Prism !== 'undefined' && document.querySelectorAll('pre code').length > 0) {
-          Prism.highlightAll();
-        }
+        console.log('预览组件已更新');
+        // 组件更新后尝试高亮代码
+        setTimeout(() => {
+          highlightCodeBlocks();
+        }, 500);
       },
       
       render: function() {
@@ -47,11 +170,32 @@
         );
       }
     });
-
-    // 注册预览模板
-    CMS.registerPreviewTemplate('posts', PostPreview);
     
-    // 注册编辑器组件
+    // 注册预览模板和启动监听
+    CMS.registerPreviewTemplate('posts', PostPreview);
+    CMS.registerPreviewTemplate('pages', PostPreview);
+    
+    // CMS 初始化后启动代码高亮监听
+    CMS.registerEventListener({
+      name: 'preCMS',
+      handler: function() {
+        console.log('CMS 即将初始化');
+      }
+    });
+    
+    CMS.registerEventListener({
+      name: 'postCMS',
+      handler: function() {
+        console.log('CMS 已初始化');
+        // CMS 初始化后设置 MutationObserver
+        setTimeout(setupMutationObserver, 1000);
+        
+        // 添加周期性检查，防止某些边缘情况
+        setInterval(highlightCodeBlocks, 3000);
+      }
+    });
+    
+    // 注册代码块组件
     CMS.registerEditorComponent({
       id: "code",
       label: "代码块",
@@ -60,7 +204,7 @@
           name: "language",
           label: "语言",
           widget: "select",
-          options: ["javascript", "css", "html", "python", "bash", "go", "java"],
+          options: ["javascript", "css", "html", "python", "bash", "go", "java", "yaml", "json", "markdown"],
           default: "javascript"
         },
         {
@@ -77,28 +221,26 @@
         };
       },
       toBlock: function(data) {
-        return "```" + data.language + "\n" + data.code + "```";
+        return "```" + data.language + "\n" + data.code + "\n```";
       },
       toPreview: function(data) {
+        // 确保 HTML 特殊字符被正确编码
+        const encodedCode = data.code
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+          
         return (
           '<pre class="language-' + data.language + '">' +
             '<code class="language-' + data.language + '">' +
-              data.code +
+              encodedCode +
             '</code>' +
           '</pre>'
         );
       }
     });
   </script>
-  <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // 测试 Prism.js 是否加载
-    if (typeof Prism !== 'undefined') {
-      console.log('Prism.js 已加载');
-    } else {
-      console.error('Prism.js 未加载');
-    }
-  });
-</script>
 </body>
 </html>
