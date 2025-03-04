@@ -1,5 +1,5 @@
 // 引入外部 PrismJS 样式（可选，根据需要加载）
-CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
+// CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
 // 使用 React.createElement 创建预览组件（不使用 JSX）
 function PostPreview(props) {
