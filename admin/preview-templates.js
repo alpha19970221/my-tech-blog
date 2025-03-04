@@ -1,33 +1,18 @@
-import React from 'react';
-import { PreviewTemplateComponentProps } from 'decap-cms-core';
-import 'prismjs';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-java';
-import 'prismjs/themes/prism-tomorrow.css'; // 或者选择其他主题
+// 引入外部 PrismJS 样式（可选，根据需要加载）
+CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.css');
 
-// 当 Markdown 内容渲染后高亮代码块
-const highlightCode = () => {
-  if (typeof window !== 'undefined' && window.Prism) {
-    window.Prism.highlightAll();
-  }
-};
-
-// 文章预览组件
-const PostPreview = ({ entry, widgetFor }) => {
-  React.useEffect(() => {
-    highlightCode();
-  }, [entry]);
-
-  return (
-    <div className="content">
-      <h1>{entry.getIn(['data', 'title'])}</h1>
-      <div>{widgetFor('body')}</div>
-    </div>
+// 使用 React.createElement 创建预览组件（不使用 JSX）
+function PostPreview(props) {
+  var data = props.entry.toJS();
+  return React.createElement(
+    "div",
+    { style: { padding: "1em", fontFamily: "Arial, sans-serif" } },
+    React.createElement("h1", null, data.title),
+    React.createElement("p", null, data.date),
+    // 直接插入 widgetFor 返回的 React 元素
+    props.widgetFor("body")
   );
-};
+}
 
-export default PostPreview;
+// 注册预览模板，确保 'posts' 与 config.yml 中定义的集合名称一致
+CMS.registerPreviewTemplate("posts", PostPreview);
