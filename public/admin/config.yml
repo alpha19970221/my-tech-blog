@@ -1,0 +1,18 @@
+backend:
+  name: github
+  repo: Alpha19970221/my-tech-blog  # 替换为你的 GitHub 用户名和仓库名
+  branch: main                      # 如你的分支不是 main，请修改为相应分支
+  auth_scope: repo                  # 允许 Decap CMS 操作你的仓库
+
+media_folder: "assets/uploads"      # 在仓库中的存放路径（源代码）
+
+collections:
+  - name: "posts"
+    label: "文章"
+    folder: "content/posts"         # 文章存放的位置
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "标题", name: "title", widget: "string" }
+      - { label: "日期", name: "date", widget: "datetime" }
+      - { label: "内容", name: "body", widget: "markdown" }

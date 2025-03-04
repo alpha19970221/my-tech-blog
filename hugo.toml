@@ -16,7 +16,9 @@ theme = "stack"
   
 [markup]
   [markup.highlight]
-    style = 'github'
+    noClasses = false  # 允许生成带类名的代码块
+    guessSyntax = true # 让 Hugo 自动识别代码语言
+    style = "monokai"  # 确保 Hugo 仍然为代码块生成 HTML 结构
 	
 [outputs]
   [outputs.home]
