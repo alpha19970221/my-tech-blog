@@ -12,6 +12,7 @@
   <!-- 自定义样式 -->
   <style>
     /* 确保代码块样式清晰可见 */
+    .cms-editor-preview pre[class*="language-"],
     .cms-preview-pane pre[class*="language-"] {
       background: #2d2d2d;
       color: #ccc;
@@ -21,6 +22,7 @@
       overflow: auto;
     }
 
+    .cms-editor-preview code[class*="language-"],
     .cms-preview-pane code[class*="language-"] {
       font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
       text-align: left;
@@ -33,7 +35,8 @@
     }
 
     /* 确保代码块在编辑器中的显示 */
-    .cms-editor-preview pre {
+    .cms-editor-preview pre,
+    .cms-preview-pane pre {
       background: #2d2d2d;
       color: #ccc;
       padding: 1em;
@@ -72,7 +75,45 @@
     // 定义辅助函数去高亮代码块
     function highlightCodeBlocks() {
       console.log("尝试高亮代码...");
-      const previewPane = document.querySelector('.cms-preview-pane');
+      
+      // 尝试不同的选择器找到预览窗格
+      const selectors = [
+        '.cms-preview-pane',
+        '.frame-content',
+        '.cms-editor-preview',
+        '[class*="PreviewPaneFrame"]',
+        '[class*="MarkdownPreview"]'
+      ];
+      
+      let previewPane = null;
+      
+      // 尝试每个选择器
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          previewPane = element;
+          console.log(`找到预览窗格: ${selector}`);
+          break;
+        }
+      }
+      
+      if (!previewPane) {
+        // 尝试查找 iframe
+        const iframes = document.querySelectorAll('iframe');
+        for (const iframe of iframes) {
+          try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc) {
+              previewPane = iframeDoc.body;
+              console.log('找到预览窗格 (iframe)');
+              break;
+            }
+          } catch (e) {
+            console.log('无法访问 iframe 内容', e);
+          }
+        }
+      }
+      
       if (!previewPane) {
         console.log('预览窗格未找到，稍后重试');
         return;
@@ -109,37 +150,41 @@
           
           // 添加语言类
           block.className = `language-${language}`;
-          parent.className = `language-${language}`;
+          if (parent) {
+            parent.className = `language-${language}`;
+          }
         }
         
         // 应用高亮
-        Prism.highlightElement(block);
+        try {
+          Prism.highlightElement(block);
+          console.log('已高亮代码块');
+        } catch (e) {
+          console.error('高亮代码块时出错', e);
+        }
       });
     }
     
     // 监听 DOM 变化以检测新增的代码块
     function setupMutationObserver() {
+      console.log('尝试设置 MutationObserver...');
+      
       // 如果浏览器支持 MutationObserver
       if (window.MutationObserver) {
         const observer = new MutationObserver(function(mutations) {
-          // 如果 DOM 发生变化，尝试高亮代码
+          console.log('检测到 DOM 变化，尝试高亮代码');
           highlightCodeBlocks();
         });
         
-        // 开始观察预览窗格
-        const previewPane = document.querySelector('.cms-editor-preview');
-        if (previewPane) {
-          observer.observe(previewPane, { 
-            childList: true,
-            subtree: true 
-          });
-          console.log('已设置 MutationObserver 监听预览窗格变化');
-        } else {
-          // 如果预览窗格还不存在，稍后再试
-          setTimeout(setupMutationObserver, 1000);
-        }
+        // 开始观察整个文档
+        observer.observe(document.body, { 
+          childList: true,
+          subtree: true 
+        });
+        console.log('已设置 MutationObserver 监听文档变化');
       } else {
         // 后备方案：定期尝试高亮
+        console.log('MutationObserver 不可用，使用定期检查');
         setInterval(highlightCodeBlocks, 2000);
       }
     }
@@ -168,30 +213,6 @@
           h('h1', {}, entry.getIn(['data', 'title'])),
           h('div', {}, this.props.widgetFor('body'))
         );
-      }
-    });
-    
-    // 注册预览模板和启动监听
-    CMS.registerPreviewTemplate('posts', PostPreview);
-    CMS.registerPreviewTemplate('pages', PostPreview);
-    
-    // CMS 初始化后启动代码高亮监听
-    CMS.registerEventListener({
-      name: 'preCMS',
-      handler: function() {
-        console.log('CMS 即将初始化');
-      }
-    });
-    
-    CMS.registerEventListener({
-      name: 'postCMS',
-      handler: function() {
-        console.log('CMS 已初始化');
-        // CMS 初始化后设置 MutationObserver
-        setTimeout(setupMutationObserver, 1000);
-        
-        // 添加周期性检查，防止某些边缘情况
-        setInterval(highlightCodeBlocks, 3000);
       }
     });
     
@@ -239,6 +260,23 @@
             '</code>' +
           '</pre>'
         );
+      }
+    });
+    
+    // 注册预览模板
+    CMS.registerPreviewTemplate('posts', PostPreview);
+    CMS.registerPreviewTemplate('pages', PostPreview);
+    
+    // CMS 初始化完成后的处理
+    CMS.registerEventListener({
+      name: 'init', // 使用有效的事件名
+      handler: function() {
+        console.log('CMS 已初始化');
+        // 延迟设置，确保 CMS 完全加载
+        setTimeout(setupMutationObserver, 1000);
+        
+        // 同时设置定期检查作为备用
+        setInterval(highlightCodeBlocks, 3000);
       }
     });
   </script>
