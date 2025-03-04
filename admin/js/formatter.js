@@ -165,19 +165,21 @@ const ensureParser = (parser) => {
   return new Promise((resolve, reject) => {
     // 特殊处理JSON解析器 - 在Prettier中，JSON实际上使用babel的解析器
     if (parser === 'json') {
-      // 检查是否支持json解析
-      if (typeof prettier !== 'undefined' && prettier.format && prettier.getSupportInfo) {
-        const formats = prettier.getSupportInfo().languages;
-        const jsonSupported = formats.some(lang => lang.name === 'JSON');
-        
-        if (jsonSupported) {
+      // 检查是否已经可以解析JSON
+      if (typeof prettier !== 'undefined' && prettier.format) {
+        try {
+          // 尝试格式化一个简单的JSON字符串
+          prettier.format('{"test":true}', {parser: 'json'});
           console.log('Prettier已支持JSON格式化');
           resolve(true);
           return;
+        } catch (e) {
+          // 如果不支持json解析器，会抛出异常
+          console.log('Prettier不支持原生JSON格式化，尝试使用babel解析器');
         }
       }
       
-      // 如果不支持，尝试确保babel解析器加载
+      // 尝试确保babel解析器加载
       return ensureParser('babel').then(resolve).catch(reject);
     }
     
@@ -311,6 +313,7 @@ const formatCode = (code, language) => {
         parser = 'yaml';
         break;
       case 'json':
+        // 首先尝试使用json解析器，如果不支持会在后面进行处理
         parser = 'json';
         break;
       case 'graphql':
@@ -339,6 +342,43 @@ const formatCode = (code, language) => {
           return code;
         }
     }
+    
+    // 特殊处理JSON格式化
+    let jsonProcessed = false;
+    if (parser === 'json' && (!prettier.parsers || !prettier.parsers.json)) {
+      try {
+        // 尝试使用babel解析器格式化JSON
+        console.log('使用babel解析器格式化JSON');
+        const jsonOptions = {
+          parser: 'babel',
+          printWidth: 80,
+          tabWidth: 2,
+          useTabs: false,
+          semi: false,        // JSON不需要分号
+          singleQuote: false, // JSON必须使用双引号
+          trailingComma: 'none', // JSON不允许尾随逗号
+          bracketSpacing: true,
+          arrowParens: 'avoid',
+        };
+        
+        // 验证输入是否是有效的JSON
+        try {
+          JSON.parse(code);
+        } catch (jsonErr) {
+          console.warn('输入不是有效的JSON，可能无法正确格式化:', jsonErr);
+        }
+        
+        const formatted = prettier.format(code, jsonOptions);
+        jsonProcessed = true;
+        return formatted;
+      } catch (babelError) {
+        console.error('使用babel解析器格式化JSON失败:', babelError);
+        // 如果babel解析也失败，继续尝试其他方法
+      }
+    }
+    
+    // 如果JSON已处理，不继续执行
+    if (jsonProcessed) return;
     
     // 检查解析器是否可用
     if (!prettier.parsers || !prettier.parsers[parser]) {
@@ -369,7 +409,8 @@ const formatCode = (code, language) => {
           ...options,
           parser: 'json',
           singleQuote: false, // JSON必须使用双引号
-          trailingComma: 'none' // JSON不允许尾随逗号
+          trailingComma: 'none', // JSON不允许尾随逗号
+          semi: false // JSON不需要分号
         };
         break;
       case 'html':
