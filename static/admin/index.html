@@ -5,25 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>内容管理</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
+  <!-- 添加 Prism.js 样式 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
 </head>
 <body>
-  <!-- 直接使用 CDN 版本，不需要 webpack 构建 -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
   
-  <!-- 如果你需要预览模板，可以单独添加 -->
+  <!-- 添加 Prism.js 脚本 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+  
   <script>
-    // 你可以在这里添加自定义预览模板
-    // 例如：
-    // var PostPreview = createClass({
-    //   render: function() {
-    //     var entry = this.props.entry;
-    //     return h('div', {},
-    //       h('h1', {}, entry.getIn(['data', 'title'])),
-    //       h('div', {"className": "text"}, this.props.widgetFor('body'))
-    //     );
-    //   }
-    // });
-    // CMS.registerPreviewTemplate('posts', PostPreview);
+    // 自定义预览模板
+    const PostPreview = createClass({
+      componentDidMount() {
+        this.highlightCode();
+      },
+      
+      componentDidUpdate() {
+        this.highlightCode();
+      },
+      
+      highlightCode() {
+        // 确保 Prism 存在并且能访问 DOM
+        if (typeof Prism !== 'undefined' && document.querySelectorAll('pre code').length > 0) {
+          Prism.highlightAll();
+        }
+      },
+      
+      render: function() {
+        const entry = this.props.entry;
+        return h('div', { className: 'content' },
+          h('h1', {}, entry.getIn(['data', 'title'])),
+          h('div', {}, this.props.widgetFor('body'))
+        );
+      }
+    });
+
+    // 注册预览模板
+    CMS.registerPreviewTemplate('posts', PostPreview);
+    
+    // 注册编辑器组件
+    CMS.registerEditorComponent({
+      id: "code",
+      label: "代码块",
+      fields: [
+        {
+          name: "language",
+          label: "语言",
+          widget: "select",
+          options: ["javascript", "css", "html", "python", "bash", "go", "java"],
+          default: "javascript"
+        },
+        {
+          name: "code",
+          label: "代码",
+          widget: "code"
+        }
+      ],
+      pattern: /^```(\w+)\n([\s\S]*?)```$/,
+      fromBlock: function(match) {
+        return {
+          language: match[1],
+          code: match[2]
+        };
+      },
+      toBlock: function(data) {
+        return "```" + data.language + "\n" + data.code + "```";
+      },
+      toPreview: function(data) {
+        return (
+          '<pre class="language-' + data.language + '">' +
+            '<code class="language-' + data.language + '">' +
+              data.code +
+            '</code>' +
+          '</pre>'
+        );
+      }
+    });
   </script>
 </body>
 </html>
