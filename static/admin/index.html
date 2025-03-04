@@ -11,38 +11,57 @@
   
   <!-- 自定义样式 -->
   <style>
-    /* 确保代码块样式清晰可见 */
-    .cms-editor-preview pre[class*="language-"],
-    .cms-preview-pane pre[class*="language-"] {
-      background: #2d2d2d;
-      color: #ccc;
-      padding: 1em;
-      margin: 1em 0;
-      border-radius: 5px;
-      overflow: auto;
-    }
-
-    .cms-editor-preview code[class*="language-"],
-    .cms-preview-pane code[class*="language-"] {
-      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-      text-align: left;
-      white-space: pre;
-      word-spacing: normal;
-      word-break: normal;
-      word-wrap: normal;
-      line-height: 1.5;
-      tab-size: 4;
-    }
-
-    /* 确保代码块在编辑器中的显示 */
+    /* 确保代码块样式清晰可见 - 同时针对多个可能的选择器 */
+    pre[class*="language-"],
     .cms-editor-preview pre,
-    .cms-preview-pane pre {
-      background: #2d2d2d;
-      color: #ccc;
-      padding: 1em;
-      margin: 1em 0;
-      border-radius: 5px;
-      overflow: auto;
+    .cms-preview-pane pre,
+    iframe pre {
+      background: #2d2d2d !important;
+      color: #ccc !important;
+      padding: 1em !important;
+      margin: 1em 0 !important;
+      border-radius: 5px !important;
+      overflow: auto !important;
+    }
+
+    code[class*="language-"],
+    .cms-editor-preview code,
+    .cms-preview-pane code,
+    iframe code {
+      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+      text-align: left !important;
+      white-space: pre !important;
+      word-spacing: normal !important;
+      word-break: normal !important;
+      word-wrap: normal !important;
+      line-height: 1.5 !important;
+      tab-size: 4 !important;
+    }
+
+    /* 为代码中的各种标记添加颜色 */
+    .token.comment, .token.prolog, .token.doctype, .token.cdata {
+      color: #999 !important;
+    }
+    .token.punctuation {
+      color: #ccc !important;
+    }
+    .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted {
+      color: #f92672 !important;
+    }
+    .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted {
+      color: #a6e22e !important;
+    }
+    .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string {
+      color: #f8f8f2 !important;
+    }
+    .token.atrule, .token.attr-value, .token.keyword {
+      color: #66d9ef !important;
+    }
+    .token.function {
+      color: #e6db74 !important;
+    }
+    .token.regex, .token.important, .token.variable {
+      color: #fd971f !important;
     }
   </style>
 </head>
@@ -67,126 +86,104 @@
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof Prism !== 'undefined') {
         console.log('Prism.js 已加载');
+        
+        // 设置定期检查
+        setInterval(highlightCodeBlocksEverywhere, 2000);
       } else {
         console.error('Prism.js 未加载');
       }
     });
     
-    // 定义辅助函数去高亮代码块
-    function highlightCodeBlocks() {
-      console.log("尝试高亮代码...");
+    // 全局搜索并高亮代码块的函数
+    function highlightCodeBlocksEverywhere() {
+      console.log("正在检查代码块...");
       
-      // 尝试不同的选择器找到预览窗格
-      const selectors = [
-        '.cms-preview-pane',
-        '.frame-content',
-        '.cms-editor-preview',
-        '[class*="PreviewPaneFrame"]',
-        '[class*="MarkdownPreview"]'
-      ];
+      // 1. 尝试高亮主文档中的代码块
+      highlightCodeBlocksInElement(document);
       
-      let previewPane = null;
-      
-      // 尝试每个选择器
-      for (const selector of selectors) {
-        const element = document.querySelector(selector);
-        if (element) {
-          previewPane = element;
-          console.log(`找到预览窗格: ${selector}`);
-          break;
-        }
-      }
-      
-      if (!previewPane) {
-        // 尝试查找 iframe
-        const iframes = document.querySelectorAll('iframe');
-        for (const iframe of iframes) {
-          try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (iframeDoc) {
-              previewPane = iframeDoc.body;
-              console.log('找到预览窗格 (iframe)');
-              break;
-            }
-          } catch (e) {
-            console.log('无法访问 iframe 内容', e);
-          }
-        }
-      }
-      
-      if (!previewPane) {
-        console.log('预览窗格未找到，稍后重试');
-        return;
-      }
-      
-      // 查找所有代码块
-      const codeBlocks = previewPane.querySelectorAll('pre code');
-      console.log(`找到 ${codeBlocks.length} 个代码块`);
-      
-      // 处理没有语言类的代码块
-      codeBlocks.forEach(block => {
-        if (!block.className.includes('language-')) {
-          // 尝试从内容的第一行解析语言
-          const content = block.textContent.trim();
-          let language = 'javascript'; // 默认语言
-          
-          // 如果父元素有类名可能包含语言信息
-          const parent = block.parentElement;
-          if (parent && parent.className) {
-            const match = parent.className.match(/language-(\w+)/);
-            if (match) {
-              language = match[1];
-            }
-          }
-          
-          // 如果没有找到语言，尝试从代码内容第一行找
-          if (content.startsWith('function') || content.includes('const ') || content.includes('let ')) {
-            language = 'javascript';
-          } else if (content.includes('def ') || content.includes('import ') || content.includes('#') && content.includes(':')) {
-            language = 'python';
-          } else if (content.includes('{') && content.includes(':') && !content.includes('function')) {
-            language = 'css';
-          }
-          
-          // 添加语言类
-          block.className = `language-${language}`;
-          if (parent) {
-            parent.className = `language-${language}`;
-          }
-        }
-        
-        // 应用高亮
+      // 2. 尝试高亮所有 iframe 中的代码块
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(function(iframe) {
         try {
-          Prism.highlightElement(block);
-          console.log('已高亮代码块');
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (iframeDoc) {
+            highlightCodeBlocksInElement(iframeDoc);
+          }
         } catch (e) {
-          console.error('高亮代码块时出错', e);
+          // 跨域 iframe 会抛出异常，可以忽略
         }
       });
     }
     
-    // 监听 DOM 变化以检测新增的代码块
-    function setupMutationObserver() {
-      console.log('尝试设置 MutationObserver...');
-      
-      // 如果浏览器支持 MutationObserver
-      if (window.MutationObserver) {
-        const observer = new MutationObserver(function(mutations) {
-          console.log('检测到 DOM 变化，尝试高亮代码');
-          highlightCodeBlocks();
-        });
-        
-        // 开始观察整个文档
-        observer.observe(document.body, { 
-          childList: true,
-          subtree: true 
-        });
-        console.log('已设置 MutationObserver 监听文档变化');
-      } else {
-        // 后备方案：定期尝试高亮
-        console.log('MutationObserver 不可用，使用定期检查');
-        setInterval(highlightCodeBlocks, 2000);
+    // 在指定文档元素中高亮代码块
+    function highlightCodeBlocksInElement(docElement) {
+      // 查找所有代码块
+      const allPres = docElement.querySelectorAll('pre');
+      if (allPres.length > 0) {
+        console.log(`找到 ${allPres.length} 个 pre 元素`);
       }
+      
+      // 处理每个 pre 元素
+      allPres.forEach(function(pre) {
+        // 查找 pre 中的 code 元素
+        const code = pre.querySelector('code');
+        if (code) {
+          // 确保 pre 和 code 都有语言类
+          if (!pre.className.includes('language-')) {
+            // 尝试从 code 获取语言类
+            const codeClass = code.className;
+            const langMatch = codeClass.match(/language-(\w+)/);
+            
+            if (langMatch) {
+              pre.className = `language-${langMatch[1]} ${pre.className}`;
+            } else {
+              // 根据内容推断语言
+              const content = code.textContent.trim();
+              let language = 'javascript'; // 默认
+              
+              if (content.includes('function') || content.includes('const ') || content.includes('let ')) {
+                language = 'javascript';
+              } else if (content.includes('def ') || content.includes('import ') || (content.includes('#') && content.includes(':'))) {
+                language = 'python';
+              } else if (content.includes('{') && content.includes(':') && !content.includes('function')) {
+                language = 'css';
+              }
+              
+              pre.className = `language-${language} ${pre.className}`;
+              code.className = `language-${language} ${code.className}`;
+            }
+          }
+          
+          // 应用高亮
+          try {
+            Prism.highlightElement(code);
+          } catch (e) {
+            console.error('高亮代码时出错:', e);
+          }
+        }
+      });
+      
+      // 查找所有独立的 code 块
+      const allCodes = docElement.querySelectorAll('code');
+      if (allCodes.length > 0) {
+        console.log(`找到 ${allCodes.length} 个 code 元素`);
+      }
+      
+      // 处理每个独立的 code 元素
+      allCodes.forEach(function(code) {
+        if (code.parentElement.tagName !== 'PRE') {
+          // 如果是行内代码，添加特定的类
+          if (!code.className.includes('language-')) {
+            code.className = 'language-text ' + code.className;
+          }
+          
+          try {
+            Prism.highlightElement(code);
+          } catch (e) {
+            console.error('高亮行内代码时出错:', e);
+          }
+        }
+      });
     }
     
     // 自定义预览模板
@@ -194,29 +191,31 @@
       componentDidMount() {
         console.log('预览组件已挂载');
         // 组件挂载后尝试高亮代码
-        setTimeout(() => {
-          highlightCodeBlocks();
-        }, 500);
+        setTimeout(highlightCodeBlocksEverywhere, 500);
       },
       
       componentDidUpdate() {
         console.log('预览组件已更新');
         // 组件更新后尝试高亮代码
-        setTimeout(() => {
-          highlightCodeBlocks();
-        }, 500);
+        setTimeout(highlightCodeBlocksEverywhere, 500);
       },
       
       render: function() {
         const entry = this.props.entry;
+        const title = entry.getIn(['data', 'title']) || '';
+        
         return h('div', { className: 'content' },
-          h('h1', {}, entry.getIn(['data', 'title'])),
+          h('h1', {}, title),
           h('div', {}, this.props.widgetFor('body'))
         );
       }
     });
     
-    // 注册代码块组件
+    // 注册预览模板
+    CMS.registerPreviewTemplate('posts', PostPreview);
+    CMS.registerPreviewTemplate('pages', PostPreview);
+    
+    // 注册代码块编辑器组件
     CMS.registerEditorComponent({
       id: "code",
       label: "代码块",
@@ -231,7 +230,7 @@
         {
           name: "code",
           label: "代码",
-          widget: "code"
+          widget: "text"
         }
       ],
       pattern: /^```(\w+)\n([\s\S]*?)```$/,
@@ -263,21 +262,21 @@
       }
     });
     
-    // 注册预览模板
-    CMS.registerPreviewTemplate('posts', PostPreview);
-    CMS.registerPreviewTemplate('pages', PostPreview);
-    
-    // CMS 初始化完成后的处理
-    CMS.registerEventListener({
-      name: 'init', // 使用有效的事件名
-      handler: function() {
-        console.log('CMS 已初始化');
-        // 延迟设置，确保 CMS 完全加载
-        setTimeout(setupMutationObserver, 1000);
+    // 手动初始化代码高亮
+    document.addEventListener('DOMContentLoaded', function() {
+      // 延迟一段时间确保 CMS 完全加载
+      setTimeout(function() {
+        console.log('开始初始化代码高亮');
+        // 第一次检查
+        highlightCodeBlocksEverywhere();
         
-        // 同时设置定期检查作为备用
-        setInterval(highlightCodeBlocks, 3000);
-      }
+        // 设置定期检查
+        setInterval(highlightCodeBlocksEverywhere, 2000);
+        
+        // 添加手动触发功能（通过控制台执行）
+        window.highlightCode = highlightCodeBlocksEverywhere;
+        console.log('可以通过控制台执行 highlightCode() 手动触发高亮');
+      }, 1000);
     });
   </script>
 </body>
