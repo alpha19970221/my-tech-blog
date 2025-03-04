@@ -347,13 +347,39 @@ const loadPythonFormatter = () => {
     window.pythonFormatter = {
       format: function(code) {
         try {
+          // 检查代码是否是不完整的片段
+          const trimmedCode = code.trim();
+          
+          // 检查不完整的import语句
+          if (/^\s*import\s*$/.test(trimmedCode)) {
+            console.warn('检测到不完整的Python import语句，保持原样');
+            return code;
+          }
+          
+          // 检查不完整的函数定义
+          if (/^\s*def\s+[\w_]*\s*\(\s*$/.test(trimmedCode)) {
+            console.warn('检测到不完整的Python函数定义，保持原样');
+            return code;
+          }
+          
+          // 检查不完整的类定义
+          if (/^\s*class\s+[\w_]*\s*$/.test(trimmedCode)) {
+            console.warn('检测到不完整的Python类定义，保持原样');
+            return code;
+          }
+          
           // 基本的Python格式化逻辑
           let formatted = code;
+          
+          // 如果代码过于简单（少于10个字符且不包含任何结构），则直接返回
+          if (code.length < 10 && !/[:=;\{\}\[\]\(\)]/.test(code)) {
+            return code;
+          }
           
           // 1. 移除多余的空行
           formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
           
-          // 2. 在冒号后添加换行和缩进
+          // 2. 在冒号后添加换行和缩进（如果后面没有其他内容）
           formatted = formatted.replace(/:([ \t]*)(?![\"\'\n])/g, ':\n    ');
           
           // 3. 调整缩进
@@ -605,6 +631,24 @@ const formatCode = (code, language) => {
       return code;
     }
     
+    // 对于非常简短的代码，保持原样
+    if (code.trim().length < 5) {
+      console.log('代码过短，无需格式化');
+      return code;
+    }
+    
+    // 特殊处理Python
+    if (['python', 'py'].includes(normalizedLanguage)) {
+      // 检测不完整的语句
+      if (/^\s*import\s*$/.test(code.trim()) || 
+          /^\s*from\s+[\w\.]+\s+import\s*$/.test(code.trim()) ||
+          /^\s*def\s+[\w_]*\s*\(\s*$/.test(code.trim()) ||
+          /^\s*class\s+[\w_]*\s*$/.test(code.trim())) {
+        console.warn('检测到不完整的Python代码，保持原样');
+        return code;
+      }
+    }
+    
     // 确保Prettier 3.x的插件已注册
     ensurePluginsRegistered();
     
@@ -799,6 +843,31 @@ const formatMarkdownCodeBlocks = (markdown) => {
     // 如果没有指定语言，默认为JavaScript
     const lang = language || 'javascript';
     
+    // 检查代码是否为空或只包含空白字符
+    if (!code || code.trim() === '') {
+      return match; // 保持原始代码块不变
+    }
+    
+    // 对于Python，检查代码是否是有效的语法
+    if (lang.toLowerCase() === 'python') {
+      // 简单检查Python语法 - 检测不完整的import语句
+      if (/^\s*import\s*$/.test(code.trim())) {
+        console.warn('检测到不完整的Python import语句，保持原样');
+        return match;
+      }
+      
+      // 检测其他常见的语法问题
+      if (/^\s*def\s+[\w_]*\s*\(\s*$/.test(code.trim())) {
+        console.warn('检测到不完整的Python函数定义，保持原样');
+        return match;
+      }
+      
+      if (/^\s*class\s+[\w_]*\s*$/.test(code.trim())) {
+        console.warn('检测到不完整的Python类定义，保持原样');
+        return match;
+      }
+    }
+    
     try {
       // 尝试格式化代码
       const formattedCode = formatCode(code, lang);
@@ -811,6 +880,7 @@ const formatMarkdownCodeBlocks = (markdown) => {
   });
 };
 
+// 格式化当前编辑器内容
 // 格式化当前编辑器内容
 const formatCurrentCode = (textarea, language = 'javascript') => {
   if (!textarea) return;
@@ -835,46 +905,57 @@ const formatCurrentCode = (textarea, language = 'javascript') => {
     value: textarea.value.substring(textarea.selectionStart, textarea.selectionEnd)
   };
   
+  // 如果选中的内容过短或者过于简单，可能不需要格式化
+  if (selection.start !== selection.end && selection.value.trim().length < 5) {
+    console.log('选中内容过短，无需格式化');
+    return;
+  }
+  
   // 检测是否是Markdown文档
   const isMarkdown = isMarkdownEditor(textarea);
   
-  // 如果有选中的代码，只格式化选中的部分
-  if (selection.start !== selection.end) {
-    let formattedText;
-    
-    if (isMarkdown) {
-      // 尝试作为Markdown代码块格式化选中内容
-      formattedText = formatMarkdownCodeBlocks(selection.value);
+  try {
+    // 如果有选中的代码，只格式化选中的部分
+    if (selection.start !== selection.end) {
+      let formattedText;
       
-      // 如果没有匹配到代码块，则尝试作为单一语言的代码进行格式化
-      if (formattedText === selection.value) {
-        // 检查是否是单个代码块的内容（没有围绕的```）
-        const isCodeBlockContent = isCodeWithoutDelimiters(selection.value);
-        if (isCodeBlockContent) {
-          formattedText = formatCode(selection.value, language);
+      if (isMarkdown) {
+        // 尝试作为Markdown代码块格式化选中内容
+        formattedText = formatMarkdownCodeBlocks(selection.value);
+        
+        // 如果没有匹配到代码块，则尝试作为单一语言的代码进行格式化
+        if (formattedText === selection.value) {
+          // 检查是否是单个代码块的内容（没有围绕的```）
+          const isCodeBlockContent = isCodeWithoutDelimiters(selection.value);
+          if (isCodeBlockContent) {
+            formattedText = formatCode(selection.value, language);
+          }
         }
+      } else {
+        // 非Markdown模式直接格式化
+        formattedText = formatCode(selection.value, language);
       }
+      
+      const newValue = textarea.value.substring(0, selection.start) + 
+                       formattedText + 
+                       textarea.value.substring(selection.end);
+      textarea.value = newValue;
     } else {
-      // 非Markdown模式直接格式化
-      formattedText = formatCode(selection.value, language);
+      // 格式化整个内容
+      if (isMarkdown) {
+        textarea.value = formatMarkdownCodeBlocks(value);
+      } else {
+        textarea.value = formatCode(value, language);
+      }
     }
     
-    const newValue = textarea.value.substring(0, selection.start) + 
-                     formattedText + 
-                     textarea.value.substring(selection.end);
-    textarea.value = newValue;
-  } else {
-    // 格式化整个内容
-    if (isMarkdown) {
-      textarea.value = formatMarkdownCodeBlocks(value);
-    } else {
-      textarea.value = formatCode(value, language);
-    }
+    // 触发change事件，确保值被保存
+    const event = new Event('input', { bubbles: true });
+    textarea.dispatchEvent(event);
+  } catch (error) {
+    console.error('格式化过程中出错:', error);
+    // 不修改原文本，保持原样
   }
-  
-  // 触发change事件，确保值被保存
-  const event = new Event('input', { bubbles: true });
-  textarea.dispatchEvent(event);
 };
 
 // 判断是否是代码块内容（没有围绕的```）
