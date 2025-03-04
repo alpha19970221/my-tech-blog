@@ -1,12 +1,21 @@
 /**
- * 代码格式化功能
+ * 代码格式化功能 - 增强版
+ * 支持更多语言：JavaScript, TypeScript, HTML, CSS, JSON, Markdown, YAML,
+ * 以及C, C++, C#, Python等
  */
 
 // 全局变量跟踪加载状态和版本
 const formatterState = {
   prettierVersion: null, // 将存储 '2' 或 '3'，表示主要版本
   loadedPlugins: new Set(),
-  registeredPlugins: new Set()
+  registeredPlugins: new Set(),
+  externalFormatters: {
+    // 存储外部格式化工具的加载状态
+    c: false,
+    cpp: false,
+    csharp: false,
+    python: false
+  }
 };
 
 // 检查并加载Prettier库及其插件
@@ -136,7 +145,13 @@ const loadPrettierPlugins = () => {
             }
           }
           
-          resolve();
+          // 加载扩展语言支持
+          loadExternalFormatters()
+            .then(() => resolve())
+            .catch(err => {
+              console.warn('加载扩展语言支持时出错:', err);
+              resolve(); // 继续初始化，即使扩展语言加载失败
+            });
         }
       };
       
@@ -153,8 +168,13 @@ const loadPrettierPlugins = () => {
               console.warn(`部分解析器加载失败: ${errors.join(', ')}`);
             }
             
-            // 即使有错误也继续
-            resolve();
+            // 即使有错误也继续加载扩展语言支持
+            loadExternalFormatters()
+              .then(() => resolve())
+              .catch(err => {
+                console.warn('加载扩展语言支持时出错:', err);
+                resolve(); // 继续初始化
+              });
           }
         }
       };
@@ -164,6 +184,233 @@ const loadPrettierPlugins = () => {
     
     // 开始加载所有插件
     plugins.forEach(plugin => loadPlugin(plugin));
+  });
+};
+
+// 加载外部格式化工具，用于不被Prettier原生支持的语言
+const loadExternalFormatters = () => {
+  return new Promise((resolve) => {
+    console.log('加载扩展语言支持...');
+    
+    // 加载Prism.js用于语法高亮和简单格式化
+    if (typeof Prism === 'undefined') {
+      const prismScript = document.createElement('script');
+      prismScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+      prismScript.onload = () => {
+        console.log('Prism.js核心库加载成功');
+        
+        // 加载Prism语言支持
+        loadPrismLanguages()
+          .then(() => {
+            // 加载简单的C/C++/C#格式化工具
+            loadCppFormatter()
+              .then(() => loadPythonFormatter())
+              .then(() => resolve())
+              .catch(e => {
+                console.warn('加载扩展格式化工具失败:', e);
+                resolve(); // 继续初始化
+              });
+          })
+          .catch(e => {
+            console.warn('加载Prism语言支持失败:', e);
+            resolve(); // 继续初始化
+          });
+      };
+      prismScript.onerror = (e) => {
+        console.warn('加载Prism.js失败:', e);
+        resolve(); // 继续初始化
+      };
+      document.head.appendChild(prismScript);
+    } else {
+      console.log('Prism.js已加载');
+      resolve();
+    }
+  });
+};
+
+// 加载Prism语言支持
+const loadPrismLanguages = () => {
+  return new Promise((resolve) => {
+    // 要加载的语言
+    const languages = [
+      { name: 'c', url: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js' },
+      { name: 'cpp', url: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js' },
+      { name: 'csharp', url: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js' },
+      { name: 'python', url: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js' },
+    ];
+    
+    let loadedCount = 0;
+    
+    languages.forEach(lang => {
+      const script = document.createElement('script');
+      script.src = lang.url;
+      
+      script.onload = () => {
+        console.log(`Prism ${lang.name} 语言支持加载成功`);
+        loadedCount++;
+        if (loadedCount === languages.length) {
+          console.log('所有Prism语言支持已加载完成');
+          resolve();
+        }
+      };
+      
+      script.onerror = (e) => {
+        console.warn(`加载Prism ${lang.name} 语言支持失败:`, e);
+        loadedCount++;
+        if (loadedCount === languages.length) {
+          console.log('部分Prism语言支持加载失败');
+          resolve(); // 继续初始化
+        }
+      };
+      
+      document.head.appendChild(script);
+    });
+  });
+};
+
+// 加载C/C++/C#格式化工具
+const loadCppFormatter = () => {
+  return new Promise((resolve) => {
+    // 我们使用简单的正则表达式进行基础格式化
+    // 这不是完整的C/C++/C#解析器，但可以提供基本的缩进和格式化
+    window.cppFormatter = {
+      format: function(code) {
+        try {
+          // 基本的C/C++/C#格式化逻辑
+          let formatted = code;
+          
+          // 1. 移除多余的空行
+          formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
+          
+          // 2. 在大括号后添加换行符
+          formatted = formatted.replace(/\{(?!\n)/g, '{\n');
+          formatted = formatted.replace(/(?<!\n)\}/g, '\n}');
+          
+          // 3. 调整缩进
+          const lines = formatted.split('\n');
+          let indentLevel = 0;
+          const tabSize = 4;
+          
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 减少缩进 - 如果行以 } 开始
+            if (line.startsWith('}') || line.startsWith(')') || line.startsWith(']')) {
+              indentLevel = Math.max(0, indentLevel - 1);
+            }
+            
+            // 应用缩进
+            if (line.length > 0) {
+              lines[i] = ' '.repeat(indentLevel * tabSize) + line;
+            } else {
+              lines[i] = '';
+            }
+            
+            // 增加缩进 - 如果行以 { 结束
+            if (line.endsWith('{') || line.endsWith('(') || line.endsWith('[')) {
+              indentLevel++;
+            }
+          }
+          
+          formatted = lines.join('\n');
+          
+          // 4. 在运算符周围添加空格
+          formatted = formatted.replace(/(\w)(\+|\-|\*|\/|\%|\=|\<|\>|\&|\|)(\w)/g, '$1 $2 $3');
+          
+          // 5. 在逗号后添加空格
+          formatted = formatted.replace(/,(\S)/g, ', $1');
+          
+          // 6. 修复包含注释的行
+          formatted = formatted.replace(/\/\/(.*)$/gm, '// $1');
+          
+          console.log('C/C++/C#代码格式化完成');
+          formatterState.externalFormatters.c = true;
+          formatterState.externalFormatters.cpp = true;
+          formatterState.externalFormatters.csharp = true;
+          
+          return formatted;
+        } catch (e) {
+          console.error('C/C++/C#格式化失败:', e);
+          return code; // 返回原始代码
+        }
+      }
+    };
+    
+    resolve();
+  });
+};
+
+// 加载Python格式化工具
+const loadPythonFormatter = () => {
+  return new Promise((resolve) => {
+    // 简单的Python格式化逻辑
+    window.pythonFormatter = {
+      format: function(code) {
+        try {
+          // 基本的Python格式化逻辑
+          let formatted = code;
+          
+          // 1. 移除多余的空行
+          formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
+          
+          // 2. 在冒号后添加换行和缩进
+          formatted = formatted.replace(/:([ \t]*)(?![\"\'\n])/g, ':\n    ');
+          
+          // 3. 调整缩进
+          const lines = formatted.split('\n');
+          const indentStack = [0];
+          const tabSize = 4;
+          
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmedLine = line.trim();
+            
+            if (trimmedLine.length === 0) {
+              continue;
+            }
+            
+            // 计算当前行的缩进级别
+            const currentIndent = line.search(/\S|$/);
+            
+            // 如果当前行缩进小于上一行，可能需要减少缩进级别
+            if (currentIndent < indentStack[indentStack.length - 1]) {
+              while (indentStack.length > 1 && currentIndent < indentStack[indentStack.length - 1]) {
+                indentStack.pop();
+              }
+            }
+            
+            // 如果当前行以冒号结束，下一行应该增加缩进
+            if (trimmedLine.endsWith(':')) {
+              indentStack.push(indentStack[indentStack.length - 1] + tabSize);
+            }
+            
+            // 应用缩进
+            lines[i] = ' '.repeat(indentStack[indentStack.length - 1]) + trimmedLine;
+          }
+          
+          formatted = lines.join('\n');
+          
+          // 4. 在操作符周围添加空格
+          formatted = formatted.replace(/(\w)(\+|\-|\*|\/|\%|\=|\<|\>|\&|\|)(\w)/g, '$1 $2 $3');
+          
+          // 5. 在逗号后添加空格
+          formatted = formatted.replace(/,(\S)/g, ', $1');
+          
+          // 6. 修复包含注释的行
+          formatted = formatted.replace(/#(.*)$/gm, '# $1');
+          
+          console.log('Python代码格式化完成');
+          formatterState.externalFormatters.python = true;
+          
+          return formatted;
+        } catch (e) {
+          console.error('Python格式化失败:', e);
+          return code; // 返回原始代码
+        }
+      }
+    };
+    
+    resolve();
   });
 };
 
@@ -211,6 +458,29 @@ const initFormatter = () => {
 // 检查特定解析器是否可用，否则尝试加载
 const ensureParser = (parser) => {
   return new Promise((resolve, reject) => {
+    // 特殊处理扩展语言
+    if (['c', 'cpp', 'csharp'].includes(parser)) {
+      if (formatterState.externalFormatters.c) {
+        resolve(true);
+      } else {
+        loadCppFormatter()
+          .then(() => resolve(true))
+          .catch(reject);
+      }
+      return;
+    }
+    
+    if (parser === 'python') {
+      if (formatterState.externalFormatters.python) {
+        resolve(true);
+      } else {
+        loadPythonFormatter()
+          .then(() => resolve(true))
+          .catch(reject);
+      }
+      return;
+    }
+    
     // 特殊处理JSON解析器
     if (parser === 'json') {
       // 对于Prettier 3.x，我们使用babel插件处理JSON
@@ -338,9 +608,33 @@ const formatCode = (code, language) => {
     // 确保Prettier 3.x的插件已注册
     ensurePluginsRegistered();
     
+    // 处理语言别名，统一化
+    const normalizedLanguage = normalizeLanguage(language);
+    
+    // 处理C, C++, C#和Python等非Prettier原生支持的语言
+    if (['c', 'cpp', 'clike', 'csharp', 'cs'].includes(normalizedLanguage)) {
+      if (window.cppFormatter && window.cppFormatter.format) {
+        return window.cppFormatter.format(code);
+      } else {
+        console.warn('C/C++/C#格式化器未加载，尝试加载...');
+        loadCppFormatter();
+        return code; // 返回原始代码，下次格式化时将可用
+      }
+    }
+    
+    if (['python', 'py'].includes(normalizedLanguage)) {
+      if (window.pythonFormatter && window.pythonFormatter.format) {
+        return window.pythonFormatter.format(code);
+      } else {
+        console.warn('Python格式化器未加载，尝试加载...');
+        loadPythonFormatter();
+        return code; // 返回原始代码，下次格式化时将可用
+      }
+    }
+    
     // 确定Prettier解析器
     let parser;
-    switch (language.toLowerCase()) {
+    switch (normalizedLanguage) {
       case 'javascript':
       case 'js':
         parser = 'babel';
@@ -431,7 +725,7 @@ const formatCode = (code, language) => {
     };
     
     // 特定语言的自定义选项
-    if (language.toLowerCase() === 'json') {
+    if (normalizedLanguage === 'json') {
       options = {
         ...options,
         singleQuote: false, // JSON必须使用双引号
@@ -444,13 +738,13 @@ const formatCode = (code, language) => {
         options.parser = 'babel';
         options.filepath = 'file.json'; // 提示这是JSON文件
       }
-    } else if (['html', 'vue'].includes(language.toLowerCase())) {
+    } else if (['html', 'vue'].includes(normalizedLanguage)) {
       options = {
         ...options,
         htmlWhitespaceSensitivity: 'css',
         vueIndentScriptAndStyle: true
       };
-    } else if (['markdown', 'md'].includes(language.toLowerCase())) {
+    } else if (['markdown', 'md'].includes(normalizedLanguage)) {
       options = {
         ...options,
         proseWrap: 'preserve'
@@ -470,6 +764,28 @@ const formatCode = (code, language) => {
     // 返回原始代码
     return code;
   }
+};
+
+// 标准化语言名称
+const normalizeLanguage = (language) => {
+  if (!language) return 'javascript';
+  
+  const lang = language.toLowerCase();
+  
+  // 语言别名映射
+  const aliases = {
+    'js': 'javascript',
+    'ts': 'typescript',
+    'py': 'python',
+    'rb': 'ruby',
+    'cs': 'csharp',
+    'c++': 'cpp',
+    'md': 'markdown',
+    'yml': 'yaml',
+    'gql': 'graphql'
+  };
+  
+  return aliases[lang] || lang;
 };
 
 // 格式化Markdown中的代码块
@@ -572,7 +888,12 @@ const isCodeWithoutDelimiters = (text) => {
     /class\s+\w+/,        // 类定义
     /import\s+|export\s+/, // ES模块
     /\=\>|\.then\(/,      // 箭头函数或Promise
-    /\{\s*[\w'"]+\s*\:/    // 对象字面量
+    /\{\s*[\w'"]+\s*\:/,   // 对象字面量
+    /^\s*#include/,       // C/C++头文件包含
+    /^\s*using\s+namespace/, // C++命名空间
+    /^\s*public\s+class/,  // C#类定义
+    /^\s*def\s+\w+\(/,     // Python函数定义
+    /^\s*import\s+[\w\.]+/ // Python导入
   ];
   
   return codePatterns.some(pattern => pattern.test(text));
@@ -704,6 +1025,10 @@ const determineLanguage = (textarea) => {
         language = 'html';
       } else if (text.includes('python') || text.includes('py')) {
         language = 'python';
+      } else if (text.includes('c++') || text.includes('cpp')) {
+        language = 'cpp';
+      } else if (text.includes('c#') || text.includes('csharp')) {
+        language = 'csharp';
       } else if (text.includes('yaml') || text.includes('yml')) {
         language = 'yaml';
       } else if (text.includes('json')) {
@@ -762,5 +1087,10 @@ window.codeFormatter = {
   formatMarkdown: formatMarkdownCodeBlocks,
   formatEditor: formatCurrentCode,
   determineLang: determineLanguage,
-  loadPrettier: loadPrettier
+  loadPrettier: loadPrettier,
+  // 扩展语言API
+  formatC: (code) => formatCode(code, 'c'),
+  formatCpp: (code) => formatCode(code, 'cpp'),
+  formatCSharp: (code) => formatCode(code, 'csharp'),
+  formatPython: (code) => formatCode(code, 'python')
 };
