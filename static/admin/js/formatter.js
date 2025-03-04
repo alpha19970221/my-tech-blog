@@ -623,6 +623,23 @@ const ensureParser = (parser) => {
 // 代码格式化函数
 const formatCode = (code, language) => {
   try {
+    // 检查code参数是否有效
+    if (code === undefined || code === null) {
+      console.warn('传入formatCode的代码为空或undefined');
+      return ''; // 返回空字符串而不是undefined
+    }
+    
+    // 确保code是字符串类型
+    if (typeof code !== 'string') {
+      console.warn(`formatCode接收到非字符串类型: ${typeof code}, 尝试转换`);
+      try {
+        code = String(code);
+      } catch (e) {
+        console.error('无法将输入转换为字符串:', e);
+        return '';
+      }
+    }
+    
     // 确保Prettier已加载
     if (typeof prettier === 'undefined') {
       console.error('Prettier库未加载');
@@ -635,7 +652,7 @@ const formatCode = (code, language) => {
     ensurePluginsRegistered();
     
     // 处理语言别名，统一化
-    const normalizedLanguage = normalizeLanguage(language);
+    const normalizedLanguage = normalizeLanguage(language || 'javascript');
     
     // 对于非常简短的代码，保持原样
     if (code.trim().length < 5) {
@@ -804,7 +821,7 @@ const formatCode = (code, language) => {
   } catch (e) {
     console.error('格式化代码失败:', e);
     // 返回原始代码
-    return code;
+    return code || '';
   }
 };
 
@@ -832,50 +849,76 @@ const normalizeLanguage = (language) => {
 
 // 格式化Markdown中的代码块
 const formatMarkdownCodeBlocks = (markdown) => {
-  if (!markdown) return markdown;
-  
-  // 正则表达式匹配Markdown代码块: ```language\n code \n```
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
-  
-  return markdown.replace(codeBlockRegex, (match, language, code) => {
-    // 如果没有指定语言，默认为JavaScript
-    const lang = language || 'javascript';
-    
-    // 检查代码是否为空或只包含空白字符
-    if (!code || code.trim() === '') {
-      return match; // 保持原始代码块不变
+  try {
+    // 检查markdown参数是否有效
+    if (markdown === undefined || markdown === null) {
+      console.warn('传入formatMarkdownCodeBlocks的Markdown为空或undefined');
+      return ''; // 返回空字符串
     }
     
-    // 对于Python，检查代码是否是有效的语法
-    if (lang.toLowerCase() === 'python') {
-      // 简单检查Python语法 - 检测不完整的import语句
-      if (/^\s*import\s*$/.test(code.trim())) {
-        console.warn('检测到不完整的Python import语句，保持原样');
+    // 确保markdown是字符串类型
+    if (typeof markdown !== 'string') {
+      console.warn(`formatMarkdownCodeBlocks接收到非字符串类型: ${typeof markdown}, 尝试转换`);
+      try {
+        markdown = String(markdown);
+      } catch (e) {
+        console.error('无法将输入转换为字符串:', e);
+        return '';
+      }
+    }
+    
+    // 正则表达式匹配Markdown代码块: ```language\n code \n```
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
+    
+    return markdown.replace(codeBlockRegex, (match, language, code) => {
+      // 检查代码和语言是否有效
+      if (code === undefined) {
+        console.warn('检测到代码块内容为undefined，保持原样');
         return match;
       }
       
-      // 检测其他常见的语法问题
-      if (/^\s*def\s+[\w_]*\s*\(\s*$/.test(code.trim())) {
-        console.warn('检测到不完整的Python函数定义，保持原样');
-        return match;
+      // 如果没有指定语言，默认为JavaScript
+      const lang = language || 'javascript';
+      
+      // 检查代码是否为空或只包含空白字符
+      if (!code || code.trim() === '') {
+        return match; // 保持原始代码块不变
       }
       
-      if (/^\s*class\s+[\w_]*\s*$/.test(code.trim())) {
-        console.warn('检测到不完整的Python类定义，保持原样');
+      // 对于Python，检查代码是否是有效的语法
+      if (lang.toLowerCase() === 'python') {
+        // 简单检查Python语法 - 检测不完整的import语句
+        if (/^\s*import\s*$/.test(code.trim())) {
+          console.warn('检测到不完整的Python import语句，保持原样');
+          return match;
+        }
+        
+        // 检测其他常见的语法问题
+        if (/^\s*def\s+[\w_]*\s*\(\s*$/.test(code.trim())) {
+          console.warn('检测到不完整的Python函数定义，保持原样');
+          return match;
+        }
+        
+        if (/^\s*class\s+[\w_]*\s*$/.test(code.trim())) {
+          console.warn('检测到不完整的Python类定义，保持原样');
+          return match;
+        }
+      }
+      
+      try {
+        // 尝试格式化代码
+        const formattedCode = formatCode(code, lang);
+        return '```' + lang + '\n' + formattedCode + '\n```';
+      } catch (e) {
+        console.error('格式化Markdown代码块失败:', e);
+        // 保持原样
         return match;
       }
-    }
-    
-    try {
-      // 尝试格式化代码
-      const formattedCode = formatCode(code, lang);
-      return '```' + lang + '\n' + formattedCode + '\n```';
-    } catch (e) {
-      console.error('格式化Markdown代码块失败:', e);
-      // 保持原样
-      return match;
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Markdown代码块处理失败:', error);
+    return markdown || ''; // 返回原始内容或空字符串
+  }
 };
 
 // 格式化当前编辑器内容
