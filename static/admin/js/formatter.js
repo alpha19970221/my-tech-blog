@@ -2,6 +2,13 @@
  * 代码格式化功能
  */
 
+// 全局变量跟踪加载状态和版本
+const formatterState = {
+  prettierVersion: null, // 将存储 '2' 或 '3'，表示主要版本
+  loadedPlugins: new Set(),
+  registeredPlugins: new Set()
+};
+
 // 检查并加载Prettier库及其插件
 const loadPrettier = () => {
   return new Promise((resolve, reject) => {
@@ -14,31 +21,35 @@ const loadPrettier = () => {
     
     console.log('正在加载Prettier库...');
     
-    // 加载Prettier核心库
+    // 先尝试加载Prettier 2.8.8 (更稳定的旧版本)
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/prettier@3.0.3/standalone.js';
+    script.src = 'https://unpkg.com/prettier@2.8.8/standalone.js';
     script.onload = () => {
-      console.log('Prettier核心库加载成功');
+      console.log('Prettier 2.8.8核心库加载成功');
+      formatterState.prettierVersion = '2';
       // 加载所需的解析器
       loadPrettierPlugins().then(resolve).catch(reject);
     };
     script.onerror = (e) => {
-      console.error('加载Prettier 3.0.3失败，尝试加载2.8.8版本:', e);
-      // 尝试备用版本
-      const backupScript = document.createElement('script');
-      backupScript.src = 'https://unpkg.com/prettier@2.8.8/standalone.js';
-      backupScript.onload = () => {
-        console.log('从备用版本加载Prettier核心库成功');
-        loadPrettierPlugins(true).then(resolve).catch(reject);
+      console.error('加载Prettier 2.8.8失败，尝试加载3.0.3版本:', e);
+      // 尝试Prettier 3
+      const newer = document.createElement('script');
+      newer.src = 'https://unpkg.com/prettier@3.0.3/standalone.js';
+      newer.onload = () => {
+        console.log('Prettier 3.0.3核心库加载成功');
+        formatterState.prettierVersion = '3';
+        // 加载所需的解析器
+        loadPrettierPlugins().then(resolve).catch(reject);
       };
-      backupScript.onerror = (err) => {
-        console.error('加载Prettier备用版本也失败:', err);
+      newer.onerror = (err) => {
+        console.error('加载Prettier 3.0.3也失败:', err);
         // 尝试备用CDN
         const cdnScript = document.createElement('script');
         cdnScript.src = 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/standalone.min.js';
         cdnScript.onload = () => {
-          console.log('从备用CDN加载Prettier核心库成功');
-          loadPrettierPlugins(true).then(resolve).catch(reject);
+          console.log('从备用CDN加载Prettier 2.8.8核心库成功');
+          formatterState.prettierVersion = '2';
+          loadPrettierPlugins().then(resolve).catch(reject);
         };
         cdnScript.onerror = (e) => {
           console.error('从所有来源加载Prettier失败:', e);
@@ -46,18 +57,18 @@ const loadPrettier = () => {
         };
         document.head.appendChild(cdnScript);
       };
-      document.head.appendChild(backupScript);
+      document.head.appendChild(newer);
     };
     document.head.appendChild(script);
   });
 };
 
 // 加载Prettier解析器插件，包含重试机制
-const loadPrettierPlugins = (useFallback = false) => {
+const loadPrettierPlugins = () => {
   return new Promise((resolve, reject) => {
     let plugins;
     
-    if (useFallback) {
+    if (formatterState.prettierVersion === '2') {
       // Prettier 2.8.8的解析器
       plugins = [
         { name: 'babel', url: 'https://unpkg.com/prettier@2.8.8/parser-babel.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-babel.min.js' },
@@ -66,10 +77,7 @@ const loadPrettierPlugins = (useFallback = false) => {
         { name: 'html', url: 'https://unpkg.com/prettier@2.8.8/parser-html.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-html.min.js' },
         { name: 'markdown', url: 'https://unpkg.com/prettier@2.8.8/parser-markdown.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-markdown.min.js' },
         { name: 'yaml', url: 'https://unpkg.com/prettier@2.8.8/parser-yaml.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-yaml.min.js' },
-        { name: 'graphql', url: 'https://unpkg.com/prettier@2.8.8/parser-graphql.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-graphql.min.js' },
-        { name: 'flow', url: 'https://unpkg.com/prettier@2.8.8/parser-flow.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-flow.min.js' },
-        { name: 'angular', url: 'https://unpkg.com/prettier@2.8.8/parser-angular.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-angular.min.js' },
-        { name: 'glimmer', url: 'https://unpkg.com/prettier@2.8.8/parser-glimmer.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-glimmer.min.js' }
+        { name: 'graphql', url: 'https://unpkg.com/prettier@2.8.8/parser-graphql.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-graphql.min.js' }
       ];
     } else {
       // Prettier 3.0.3的解析器 (最新版)
@@ -80,10 +88,7 @@ const loadPrettierPlugins = (useFallback = false) => {
         { name: 'html', url: 'https://unpkg.com/prettier@3.0.3/plugins/html.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/html.min.js' },
         { name: 'markdown', url: 'https://unpkg.com/prettier@3.0.3/plugins/markdown.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/markdown.min.js' },
         { name: 'yaml', url: 'https://unpkg.com/prettier@3.0.3/plugins/yaml.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/yaml.min.js' },
-        { name: 'graphql', url: 'https://unpkg.com/prettier@3.0.3/plugins/graphql.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/graphql.min.js' },
-        { name: 'estree', url: 'https://unpkg.com/prettier@3.0.3/plugins/estree.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/estree.min.js' },
-        { name: 'angular', url: 'https://unpkg.com/prettier@3.0.3/plugins/angular.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/angular.min.js' },
-        { name: 'glimmer', url: 'https://unpkg.com/prettier@3.0.3/plugins/glimmer.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/glimmer.min.js' }
+        { name: 'graphql', url: 'https://unpkg.com/prettier@3.0.3/plugins/graphql.js', backup: 'https://cdn.jsdelivr.net/npm/prettier@3.0.3/plugins/graphql.min.js' }
       ];
     }
     
@@ -96,13 +101,39 @@ const loadPrettierPlugins = (useFallback = false) => {
       
       script.onload = () => {
         console.log(`解析器 ${plugin.name} 加载成功${useBackup ? '(使用备用CDN)' : ''}`);
+        formatterState.loadedPlugins.add(plugin.name);
+        
+        // 如果是Prettier 3.x，需要注册插件
+        if (formatterState.prettierVersion === '3' && typeof window[`prettierPlugins`] !== 'undefined') {
+          try {
+            // 在Prettier 3.x中，插件通常在全局作用域以prettierPlugins.NAME形式存在
+            if (typeof window.prettierPlugins !== 'undefined' && window.prettierPlugins[plugin.name]) {
+              if (!formatterState.registeredPlugins.has(plugin.name)) {
+                console.log(`注册Prettier 3.x插件: ${plugin.name}`);
+                prettier.format.sync = prettier.format; // 避免某些代码需要sync方法
+                formatterState.registeredPlugins.add(plugin.name);
+              }
+            }
+          } catch (regErr) {
+            console.error(`注册插件 ${plugin.name} 失败:`, regErr);
+          }
+        }
+        
         loadedCount++;
         if (loadedCount === plugins.length) {
           console.log('所有Prettier解析器已加载完成');
           
           // 打印可用的解析器列表
-          if (typeof prettier !== 'undefined' && prettier.parsers) {
-            console.log('可用的Prettier解析器:', Object.keys(prettier.parsers));
+          if (typeof prettier !== 'undefined' && prettier.format) {
+            try {
+              if (formatterState.prettierVersion === '3' && typeof window.prettierPlugins !== 'undefined') {
+                console.log('已加载的Prettier 3.x插件:', Object.keys(window.prettierPlugins));
+              } else if (prettier.parsers) {
+                console.log('可用的Prettier解析器:', Object.keys(prettier.parsers));
+              }
+            } catch (e) {
+              console.error('无法获取已加载的解析器列表:', e);
+            }
           }
           
           resolve();
@@ -122,12 +153,8 @@ const loadPrettierPlugins = (useFallback = false) => {
               console.warn(`部分解析器加载失败: ${errors.join(', ')}`);
             }
             
-            // 打印可用的解析器列表
-            if (typeof prettier !== 'undefined' && prettier.parsers) {
-              console.log('可用的Prettier解析器:', Object.keys(prettier.parsers));
-            }
-            
-            resolve(); // 即使有错误也继续
+            // 即使有错误也继续
+            resolve();
           }
         }
       };
@@ -140,13 +167,34 @@ const loadPrettierPlugins = (useFallback = false) => {
   });
 };
 
+// 确保插件已注册 (仅对Prettier 3.x)
+const ensurePluginsRegistered = () => {
+  if (formatterState.prettierVersion !== '3' || typeof window.prettierPlugins === 'undefined') {
+    return;
+  }
+  
+  // 检查所有已加载但未注册的插件
+  for (const pluginName of formatterState.loadedPlugins) {
+    if (!formatterState.registeredPlugins.has(pluginName) && 
+        window.prettierPlugins && 
+        window.prettierPlugins[pluginName]) {
+      
+      try {
+        console.log(`延迟注册Prettier插件: ${pluginName}`);
+        formatterState.registeredPlugins.add(pluginName);
+      } catch (e) {
+        console.error(`注册插件 ${pluginName} 失败:`, e);
+      }
+    }
+  }
+};
+
 // 初始化函数
 const initFormatter = () => {
   console.log('正在初始化代码格式化器...');
   loadPrettier()
     .then(() => {
       console.log('代码格式化器初始化完成');
-      // 可以在这里添加额外的初始化逻辑
       
       // 找到所有文本区域并添加格式化按钮
       document.querySelectorAll('textarea').forEach(textarea => {
@@ -163,27 +211,42 @@ const initFormatter = () => {
 // 检查特定解析器是否可用，否则尝试加载
 const ensureParser = (parser) => {
   return new Promise((resolve, reject) => {
-    // 特殊处理JSON解析器 - 在Prettier中，JSON实际上使用babel的解析器
+    // 特殊处理JSON解析器
     if (parser === 'json') {
-      // 检查是否已经可以解析JSON
-      if (typeof prettier !== 'undefined' && prettier.format) {
-        try {
-          // 尝试格式化一个简单的JSON字符串
-          prettier.format('{"test":true}', {parser: 'json'});
-          console.log('Prettier已支持JSON格式化');
-          resolve(true);
-          return;
-        } catch (e) {
-          // 如果不支持json解析器，会抛出异常
-          console.log('Prettier不支持原生JSON格式化，尝试使用babel解析器');
-        }
+      // 对于Prettier 3.x，我们使用babel插件处理JSON
+      if (formatterState.prettierVersion === '3') {
+        return ensureParser('babel').then(resolve).catch(reject);
+      }
+      
+      // 对于Prettier 2.x，JSON可能直接支持或使用babel
+      if (typeof prettier !== 'undefined' && prettier.parsers && prettier.parsers.json) {
+        resolve(true);
+        return;
       }
       
       // 尝试确保babel解析器加载
       return ensureParser('babel').then(resolve).catch(reject);
     }
     
-    if (typeof prettier !== 'undefined' && prettier.parsers && prettier.parsers[parser]) {
+    // 确保Prettier 3.x的插件已注册
+    ensurePluginsRegistered();
+    
+    // 检查解析器是否可用 (不同版本的检查方法不同)
+    let parserAvailable = false;
+    
+    if (formatterState.prettierVersion === '3') {
+      // Prettier 3.x 通过全局的prettierPlugins检查
+      parserAvailable = typeof window.prettierPlugins !== 'undefined' && 
+                        window.prettierPlugins[parser] !== undefined &&
+                        formatterState.registeredPlugins.has(parser);
+    } else {
+      // Prettier 2.x 直接检查parsers对象
+      parserAvailable = typeof prettier !== 'undefined' && 
+                        prettier.parsers && 
+                        prettier.parsers[parser] !== undefined;
+    }
+    
+    if (parserAvailable) {
       resolve(true);
       return;
     }
@@ -195,66 +258,60 @@ const ensureParser = (parser) => {
     if (typeof prettier === 'undefined') {
       loadPrettier().then(() => {
         // 再次检查解析器
-        if (prettier.parsers && prettier.parsers[parser]) {
-          resolve(true);
-        } else {
-          reject(new Error(`无法加载解析器 ${parser}`));
-        }
+        ensureParser(parser).then(resolve).catch(reject);
       }).catch(reject);
       return;
     }
     
-    // 获取Prettier版本号，决定使用哪个路径格式
-    const isPrettier3 = prettier.version && prettier.version.startsWith('3');
+    // 构建解析器URL
+    const parserUrl = formatterState.prettierVersion === '3' 
+      ? `https://unpkg.com/prettier@3.0.3/plugins/${parser}.js`
+      : `https://unpkg.com/prettier@2.8.8/parser-${parser}.js`;
     
-    // Prettier已加载但缺少特定解析器
-    const parserMap = isPrettier3 ? {
-      // Prettier 3.x 路径格式
-      'babel': 'https://unpkg.com/prettier@3.0.3/plugins/babel.js',
-      'typescript': 'https://unpkg.com/prettier@3.0.3/plugins/typescript.js',
-      'css': 'https://unpkg.com/prettier@3.0.3/plugins/postcss.js',
-      'html': 'https://unpkg.com/prettier@3.0.3/plugins/html.js',
-      'markdown': 'https://unpkg.com/prettier@3.0.3/plugins/markdown.js',
-      'yaml': 'https://unpkg.com/prettier@3.0.3/plugins/yaml.js',
-      'graphql': 'https://unpkg.com/prettier@3.0.3/plugins/graphql.js',
-      'angular': 'https://unpkg.com/prettier@3.0.3/plugins/angular.js',
-      'glimmer': 'https://unpkg.com/prettier@3.0.3/plugins/glimmer.js',
-      'estree': 'https://unpkg.com/prettier@3.0.3/plugins/estree.js'
-    } : {
-      // Prettier 2.x 路径格式
-      'babel': 'https://unpkg.com/prettier@2.8.8/parser-babel.js',
-      'typescript': 'https://unpkg.com/prettier@2.8.8/parser-typescript.js',
-      'css': 'https://unpkg.com/prettier@2.8.8/parser-postcss.js',
-      'html': 'https://unpkg.com/prettier@2.8.8/parser-html.js',
-      'markdown': 'https://unpkg.com/prettier@2.8.8/parser-markdown.js',
-      'yaml': 'https://unpkg.com/prettier@2.8.8/parser-yaml.js',
-      'graphql': 'https://unpkg.com/prettier@2.8.8/parser-graphql.js',
-      'flow': 'https://unpkg.com/prettier@2.8.8/parser-flow.js',
-      'angular': 'https://unpkg.com/prettier@2.8.8/parser-angular.js',
-      'glimmer': 'https://unpkg.com/prettier@2.8.8/parser-glimmer.js'
-    };
-    
-    if (!parserMap[parser]) {
-      reject(new Error(`未知的解析器类型: ${parser}`));
-      return;
-    }
+    const backupUrl = parserUrl.replace('unpkg.com', 'cdn.jsdelivr.net/npm');
     
     const script = document.createElement('script');
-    script.src = parserMap[parser];
+    script.src = parserUrl;
     script.onload = () => {
       console.log(`解析器 ${parser} 加载成功`);
+      
+      // 对于Prettier 3.x，需要注册插件
+      if (formatterState.prettierVersion === '3' && typeof window.prettierPlugins !== 'undefined') {
+        try {
+          if (window.prettierPlugins[parser]) {
+            console.log(`注册Prettier 3.x插件: ${parser}`);
+            formatterState.registeredPlugins.add(parser);
+          }
+        } catch (e) {
+          console.error(`注册插件 ${parser} 失败:`, e);
+        }
+      }
+      
+      formatterState.loadedPlugins.add(parser);
       resolve(true);
     };
+    
     script.onerror = (e) => {
       console.error(`加载解析器 ${parser} 失败:`, e);
       // 尝试备用CDN
       const backupScript = document.createElement('script');
-      backupScript.src = parserMap[parser].replace('unpkg.com', 'cdn.jsdelivr.net/npm');
-      if (!backupScript.src.endsWith('.min.js')) {
-        backupScript.src = backupScript.src.replace('.js', '.min.js');
-      }
+      backupScript.src = backupUrl;
       backupScript.onload = () => {
         console.log(`从备用CDN加载解析器 ${parser} 成功`);
+        
+        // 对于Prettier 3.x，需要注册插件
+        if (formatterState.prettierVersion === '3' && typeof window.prettierPlugins !== 'undefined') {
+          try {
+            if (window.prettierPlugins[parser]) {
+              console.log(`注册Prettier 3.x插件: ${parser}`);
+              formatterState.registeredPlugins.add(parser);
+            }
+          } catch (e) {
+            console.error(`注册插件 ${parser} 失败:`, e);
+          }
+        }
+        
+        formatterState.loadedPlugins.add(parser);
         resolve(true);
       };
       backupScript.onerror = (err) => {
@@ -278,6 +335,9 @@ const formatCode = (code, language) => {
       return code;
     }
     
+    // 确保Prettier 3.x的插件已注册
+    ensurePluginsRegistered();
+    
     // 确定Prettier解析器
     let parser;
     switch (language.toLowerCase()) {
@@ -298,7 +358,7 @@ const formatCode = (code, language) => {
       case 'css':
       case 'scss':
       case 'less':
-        parser = 'css';
+        parser = 'postcss'; // 在Prettier中，CSS使用postcss解析器
         break;
       case 'html':
       case 'vue':
@@ -313,29 +373,19 @@ const formatCode = (code, language) => {
         parser = 'yaml';
         break;
       case 'json':
-        // 首先尝试使用json解析器，如果不支持会在后面进行处理
-        parser = 'json';
+        // 根据当前加载的Prettier版本选择JSON解析方法
+        parser = formatterState.prettierVersion === '3' ? 'babel' : 'json';
         break;
       case 'graphql':
       case 'gql':
         parser = 'graphql';
-        break;
-      case 'angular':
-        parser = 'angular';
-        break;
-      case 'handlebars':
-      case 'hbs':
-        parser = 'glimmer';
-        break;
-      case 'flow':
-        parser = 'flow';
         break;
       default:
         // 尝试根据代码内容猜测语言
         if (/^\s*</.test(code)) {
           parser = 'html';
         } else if (/^\s*{/.test(code) || /^\s*\[/.test(code)) {
-          parser = 'json';
+          parser = formatterState.prettierVersion === '3' ? 'babel' : 'json';
         } else {
           // 对于不支持的语言，返回原始代码
           console.warn(`不支持的语言: ${language}，返回原始代码`);
@@ -343,53 +393,31 @@ const formatCode = (code, language) => {
         }
     }
     
-    // 特殊处理JSON格式化
-    let jsonProcessed = false;
-    if (parser === 'json' && (!prettier.parsers || !prettier.parsers.json)) {
-      try {
-        // 尝试使用babel解析器格式化JSON
-        console.log('使用babel解析器格式化JSON');
-        const jsonOptions = {
-          parser: 'babel',
-          printWidth: 80,
-          tabWidth: 2,
-          useTabs: false,
-          semi: false,        // JSON不需要分号
-          singleQuote: false, // JSON必须使用双引号
-          trailingComma: 'none', // JSON不允许尾随逗号
-          bracketSpacing: true,
-          arrowParens: 'avoid',
-        };
-        
-        // 验证输入是否是有效的JSON
-        try {
-          JSON.parse(code);
-        } catch (jsonErr) {
-          console.warn('输入不是有效的JSON，可能无法正确格式化:', jsonErr);
-        }
-        
-        const formatted = prettier.format(code, jsonOptions);
-        jsonProcessed = true;
-        return formatted;
-      } catch (babelError) {
-        console.error('使用babel解析器格式化JSON失败:', babelError);
-        // 如果babel解析也失败，继续尝试其他方法
-      }
+    // 检查解析器是否可用
+    let parserAvailable = false;
+    
+    if (formatterState.prettierVersion === '3') {
+      // Prettier 3.x - 检查全局的prettierPlugins对象
+      parserAvailable = typeof window.prettierPlugins !== 'undefined' && 
+                        window.prettierPlugins[parser] !== undefined;
+    } else {
+      // Prettier 2.x - 检查prettier.parsers对象
+      parserAvailable = typeof prettier.parsers !== 'undefined' && 
+                        prettier.parsers[parser] !== undefined;
     }
     
-    // 如果JSON已处理，不继续执行
-    if (jsonProcessed) return;
-    
-    // 检查解析器是否可用
-    if (!prettier.parsers || !prettier.parsers[parser]) {
+    if (!parserAvailable) {
       console.warn(`Prettier解析器 "${parser}" 不可用，尝试加载...`);
       
-      // 返回原始代码，同时尝试加载解析器（下次调用时可能已加载）
-      ensureParser(parser).catch(e => console.error(`无法加载解析器 ${parser}:`, e));
+      // 尝试加载解析器，但为了不阻塞当前格式化，使用默认代码返回
+      ensureParser(parser)
+        .then(() => console.log(`解析器 ${parser} 已加载，下次格式化时将可用`))
+        .catch(e => console.error(`无法加载解析器 ${parser}:`, e));
+      
       return code;
     }
-
-    // 根据语言选择不同的格式化选项
+    
+    // 准备格式化选项
     let options = {
       parser,
       printWidth: 80,
@@ -403,36 +431,39 @@ const formatCode = (code, language) => {
     };
     
     // 特定语言的自定义选项
-    switch (language.toLowerCase()) {
-      case 'json':
-        options = {
-          ...options,
-          parser: 'json',
-          singleQuote: false, // JSON必须使用双引号
-          trailingComma: 'none', // JSON不允许尾随逗号
-          semi: false // JSON不需要分号
-        };
-        break;
-      case 'html':
-      case 'vue':
-        options = {
-          ...options,
-          htmlWhitespaceSensitivity: 'css',
-          vueIndentScriptAndStyle: true
-        };
-        break;
-      case 'markdown':
-      case 'md':
-        options = {
-          ...options,
-          proseWrap: 'preserve'
-        };
-        break;
+    if (language.toLowerCase() === 'json') {
+      options = {
+        ...options,
+        singleQuote: false, // JSON必须使用双引号
+        trailingComma: 'none', // JSON不允许尾随逗号
+        semi: false // JSON不需要分号
+      };
+      
+      // 对于Prettier 3.x，JSON使用babel解析器并需要其他选项
+      if (formatterState.prettierVersion === '3') {
+        options.parser = 'babel';
+        options.filepath = 'file.json'; // 提示这是JSON文件
+      }
+    } else if (['html', 'vue'].includes(language.toLowerCase())) {
+      options = {
+        ...options,
+        htmlWhitespaceSensitivity: 'css',
+        vueIndentScriptAndStyle: true
+      };
+    } else if (['markdown', 'md'].includes(language.toLowerCase())) {
+      options = {
+        ...options,
+        proseWrap: 'preserve'
+      };
     }
-
+    
+    // Prettier 3.x需要插件
+    if (formatterState.prettierVersion === '3') {
+      options.plugins = window.prettierPlugins;
+    }
+    
     // 格式化代码
     const formatted = prettier.format(code, options);
-    
     return formatted;
   } catch (e) {
     console.error('格式化代码失败:', e);
