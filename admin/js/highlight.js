@@ -164,20 +164,24 @@ const loadPrismToDocument = () => {
     fontLink.href = 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap';
     document.head.appendChild(fontLink);
     
-    // 加载核心脚本
+    // 加载完整的Prism而不是分开加载核心和语言
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
     script.onload = () => {
-      console.log('Prism核心已加载到主文档');
+      console.log('完整的Prism已加载到主文档');
       
-      // 加载自动加载器
-      const autoloader = document.createElement('script');
-      autoloader.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
-      autoloader.onload = () => {
-        console.log('Prism自动加载器已加载');
+      // 加载额外的JavaScript语言支持
+      const jsScript = document.createElement('script');
+      jsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js';
+      jsScript.onload = () => {
+        console.log('JavaScript语法支持已加载');
         resolve();
       };
-      document.body.appendChild(autoloader);
+      jsScript.onerror = (e) => {
+        console.warn('加载JavaScript语法支持失败，但继续', e);
+        resolve(); // 即使失败也resolve，避免阻塞
+      };
+      document.body.appendChild(jsScript);
     };
     script.onerror = (e) => {
       console.error('加载Prism失败:', e);
