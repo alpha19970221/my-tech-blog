@@ -356,68 +356,6 @@ const isInsideCodeBlock = (text, cursorPos) => {
   };
 };
 
-// 判断是否是Markdown编辑器
-const isMarkdownEditor = (textarea) => {
-  // 检查textarea或其父元素是否包含markdown相关类名
-  if (!textarea) return false;
-  
-  // DecapCMS 的Markdown编辑器检测
-  const isInDecapMarkdownEditor = (element) => {
-    // 向上查找最多10层父元素
-    let current = element;
-    let depth = 0;
-    while (current && depth < 10) {
-      // 检查元素id或class是否包含markdown相关字符
-      if (current.id && (
-          current.id.toLowerCase().includes('markdown') ||
-          current.id.toLowerCase().includes('md-editor')
-      )) {
-        return true;
-      }
-      
-      if (current.className && (
-          (typeof current.className === 'string' && (
-            current.className.toLowerCase().includes('markdown') ||
-            current.className.toLowerCase().includes('md-editor') ||
-            current.className.toLowerCase().includes('cms-editor')
-          )) ||
-          (current.classList && (
-            current.classList.contains('markdown-editor') ||
-            current.classList.contains('md-editor') ||
-            current.classList.contains('cms-editor-component')
-          ))
-      )) {
-        return true;
-      }
-      
-      // 检查数据属性
-      if (current.dataset && (
-          current.dataset.type === 'markdown' ||
-          current.dataset.widget === 'markdown'
-      )) {
-        return true;
-      }
-      
-      current = current.parentElement;
-      depth++;
-    }
-    
-    return false;
-  };
-  
-  // 检查textarea是否具有markdown相关的属性或类名
-  const hasMarkdownAttributes = 
-    textarea.id && (textarea.id.toLowerCase().includes('markdown') || textarea.id.toLowerCase().includes('md')) ||
-    (typeof textarea.className === 'string' && (
-      textarea.className.toLowerCase().includes('markdown') || 
-      textarea.className.toLowerCase().includes('md-editor')
-    )) ||
-    textarea.dataset.type === 'markdown' ||
-    textarea.name && textarea.name.toLowerCase().includes('markdown');
-  
-  return hasMarkdownAttributes || isInDecapMarkdownEditor(textarea);
-};
-
 // 为Markdown编辑器添加格式化按钮
 const addMarkdownFormatButton = (textarea) => {
   // 实现按钮添加逻辑
@@ -543,12 +481,10 @@ const basicJSFormat = (code) => {
   return formatted;
 };
 
-// 查找并监听DecapCMS的编辑器
-const initDecapCMSEditors = () => {
-  // 打印消息以确认脚本已加载
-  console.log('DecapCMS编辑器增强脚本已加载');
-  
-  // 定义选择器以匹配DecapCMS的编辑器
+// 兼容性处理：保留原有findAndEnhanceEditors函数
+const findAndEnhanceEditors = () => {
+  console.log('查找并增强编辑器...');
+  // 查找DecapCMS的编辑器
   const decapSelectors = [
     // Markdown编辑器
     '.CodeMirror textarea',
@@ -568,89 +504,86 @@ const initDecapCMSEditors = () => {
     '.widget-ui-pane textarea'
   ];
   
-  // 合并为一个选择器
-  const combinedSelector = decapSelectors.join(', ');
-  
-  // 找到并增强当前页面上的所有编辑器
-  const findCurrentEditors = () => {
-    console.log('查找编辑器...');
-    document.querySelectorAll(combinedSelector).forEach(editor => {
-      console.log('找到可能的编辑器:', editor);
+  // 找到并增强所有匹配的编辑器
+  decapSelectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(editor => {
+      console.log('找到编辑器:', editor);
       enhanceTextarea(editor);
     });
-  };
+  });
   
-  // 初始查找
-  setTimeout(findCurrentEditors, 1000);
+  // 以下是原始代码中的逻辑，保留以兼容现有调用
+  const widgets = document.querySelectorAll('[class*="WidgetPreviewContainer"]');
+  widgets.forEach(widget => {
+    const textareas = widget.querySelectorAll('textarea');
+    textareas.forEach(enhanceTextarea);
+  });
   
-  // MutationObserver监听DOM变化
+  // 特别查找可能的Markdown编辑器
+  const mdEditors = document.querySelectorAll('textarea[class*="markdown"], textarea[class*="Markdown"], textarea[class*="md-editor"]');
+  mdEditors.forEach(enhanceTextarea);
+  
+  // 查找通用编辑器
+  const editors = document.querySelectorAll('textarea[class*="Editor"], [class*="editor"] textarea');
+  editors.forEach(enhanceTextarea);
+};
+
+// 初始化函数
+const initEditorFeatures = () => {
+  console.log('初始化编辑器增强功能');
+  
+  // 等待页面加载
+  if (document.readyState === 'complete') {
+    findAndEnhanceEditors();
+    setupMutationObserver();
+  } else {
+    window.addEventListener('load', () => {
+      findAndEnhanceEditors();
+      setupMutationObserver();
+    });
+  }
+};
+
+// 设置DOM变化监听
+const setupMutationObserver = () => {
+  // 创建MutationObserver实例
   const observer = new MutationObserver((mutations) => {
     let shouldCheck = false;
     
     // 检查是否有相关变化
     mutations.forEach(mutation => {
-      // 如果添加了节点
       if (mutation.addedNodes.length) {
         for (let i = 0; i < mutation.addedNodes.length; i++) {
           const node = mutation.addedNodes[i];
-          // 检查是否是元素节点
-          if (node.nodeType === 1) {
-            // 检查是否匹配我们的选择器或包含匹配的子元素
-            if (node.matches && (
-                node.matches(combinedSelector) || 
-                node.querySelector(combinedSelector)
-            )) {
-              shouldCheck = true;
-              break;
-            }
+          if (node.nodeType === 1 && (
+              (node.tagName === 'TEXTAREA') || 
+              (node.querySelector && node.querySelector('textarea'))
+          )) {
+            shouldCheck = true;
+            break;
           }
         }
-      }
-      
-      // 如果修改了属性，特别是class属性
-      if (!shouldCheck && mutation.type === 'attributes' && 
-          mutation.attributeName === 'class') {
-        shouldCheck = true;
       }
     });
     
     // 如果有相关变化，重新查找编辑器
     if (shouldCheck) {
-      console.log('DOM变化，重新查找编辑器');
-      findCurrentEditors();
+      console.log('检测到DOM变化，重新查找编辑器');
+      findAndEnhanceEditors();
     }
   });
   
-  // 启动观察器
+  // 开始观察文档主体
   observer.observe(document.body, { 
     childList: true, 
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['class']
+    subtree: true 
   });
   
-  // 额外延迟检查，确保动态加载的编辑器也被处理
-  setTimeout(findCurrentEditors, 3000);
-  setTimeout(findCurrentEditors, 5000);
-};
-
-// 主初始化函数
-const initEditorFeatures = () => {
-  console.log('初始化编辑器增强功能');
-  
-  // 检查页面是否已完全加载
-  if (document.readyState === 'complete') {
-    initDecapCMSEditors();
-  } else {
-    // 等待页面加载完成
-    window.addEventListener('load', initDecapCMSEditors);
-  }
-  
-  // 也监听DOMContentLoaded事件
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(initDecapCMSEditors, 1000);
-  });
+  console.log('DOM变化监听器已设置');
 };
 
 // 启动初始化
 initEditorFeatures();
+
+// 设置定期检查，以防动态加载的编辑器被错过
+setInterval(findAndEnhanceEditors, 3000);
