@@ -252,8 +252,11 @@ const enhanceTextarea = (textarea) => {
         if (lastThreeChars === '```') {
           // 自动添加语言标识和闭合标记
           setTimeout(() => {
-            // 显示语言选择框
-            const languages = ['javascript', 'css', 'html', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx'];
+            // 显示语言选择框 - 添加C, C++, C#到选项中
+            const languages = [
+              'javascript', 'css', 'html', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx',
+              'c', 'cpp', 'csharp' // 添加C, C++, C#
+            ];
             
             // 创建语言选择框
             const langSelect = document.createElement('div');
@@ -282,7 +285,12 @@ const enhanceTextarea = (textarea) => {
             // 添加语言选项
             languages.forEach(lang => {
               const option = document.createElement('div');
-              option.textContent = lang;
+              // 显示友好名称
+              let displayName = lang;
+              if (lang === 'cpp') displayName = 'C++';
+              if (lang === 'csharp') displayName = 'C#';
+              
+              option.textContent = displayName;
               option.style.cssText = 'padding: 3px 8px; cursor: pointer; hover: background #f0f0f0;';
               option.onmouseover = () => { option.style.background = '#f0f0f0'; };
               option.onmouseout = () => { option.style.background = 'transparent'; };
@@ -371,3 +379,8 @@ const findAndEnhanceEditors = () => {
   const editors = document.querySelectorAll('textarea[class*="Editor"], [class*="editor"] textarea');
   editors.forEach(enhanceTextarea);
 };
+
+// 确保这些函数被导出为全局可用
+window.isInsideCodeBlock = isInsideCodeBlock;
+window.findAndEnhanceEditors = findAndEnhanceEditors;
+window.enhanceTextarea = enhanceTextarea;
