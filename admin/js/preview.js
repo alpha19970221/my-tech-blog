@@ -78,7 +78,10 @@ const registerCodeBlockComponent = () => {
         name: "language",
         label: "语言",
         widget: "select",
-        options: ["javascript", "css", "html", "python", "bash", "yaml", "json", "typescript", "jsx"],
+        options: [
+          "javascript", "css", "html", "python", "bash", "yaml", "json", "typescript", "jsx", 
+          "c", "cpp", "csharp" // 添加C, C++, C#
+        ],
         default: "javascript"
       },
       {
