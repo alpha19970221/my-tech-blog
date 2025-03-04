@@ -4,38 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>内容管理</title>
+  <!-- CMS必要的脚本先加载 -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- 代码高亮样式 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <!-- 初始样式 -->
   <style>
-    /* 编辑器样式优化 */
-    .code-editor {
-      font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
-      line-height: 1.5;
-    }
-    
-    /* Prism 代码块样式增强 */
-    pre[class*="language-"] {
-      border-radius: 6px;
-      padding: 1em;
-      margin: 1em 0;
-      overflow: auto;
-      background: #2d2d2d;
-    }
-    
-    code[class*="language-"] {
-      font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
-      tab-size: 2;
-    }
-    
-    /* 格式化按钮 */
-    .markdown-format-tools {
-      display: flex;
-      gap: 10px;
-      margin: 8px 0;
-      flex-wrap: wrap;
-    }
-    
-    .markdown-format-button {
+    .format-button {
       padding: 5px 10px;
       background: #4a8fee;
       color: white;
@@ -43,529 +18,201 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 5px 0;
     }
     
-    .markdown-format-button:hover {
+    .format-button:hover {
       background: #3a7edf;
-    }
-    
-    /* 调试工具 */
-    #formatter-debug {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      max-width: 300px;
-      max-height: 200px;
-      overflow: auto;
-      z-index: 9999;
-    }
-
-    /* 确保按钮在CMS界面上方 */
-    .format-controls {
-      z-index: 999; 
-      position: relative;
     }
   </style>
 </head>
 <body>
+  <!-- 确保CMS是第一个加载的脚本 -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
   
-  <!-- Prettier for code formatting -->
-  <script src="https://unpkg.com/prettier@2.8.8/standalone.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-babel.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-html.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-postcss.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-typescript.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-markdown.js"></script>
-  <script src="https://unpkg.com/prettier@2.8.8/parser-yaml.js"></script>
-  
+  <!-- 在CMS加载后延迟添加其他脚本 -->
   <script>
-    // 添加调试工具
-    const enableDebug = true;
-    
-    // 创建调试面板
-    if (enableDebug) {
-      const debugPanel = document.createElement('div');
-      debugPanel.id = 'formatter-debug';
-      debugPanel.style.display = 'none';
-      document.body.appendChild(debugPanel);
-      
-      // 添加调试日志函数
-      window.debugLog = function(message) {
-        const debugPanel = document.getElementById('formatter-debug');
-        if (debugPanel) {
-          const time = new Date().toLocaleTimeString();
-          debugPanel.innerHTML += `<div>[${time}] ${message}</div>`;
-          debugPanel.scrollTop = debugPanel.scrollHeight;
-        }
-      };
-      
-      // 添加切换按钮
-      const toggleButton = document.createElement('button');
-      toggleButton.textContent = '显示调试';
-      toggleButton.style.position = 'fixed';
-      toggleButton.style.bottom = '10px';
-      toggleButton.style.left = '10px';
-      toggleButton.style.zIndex = '9999';
-      toggleButton.onclick = function() {
-        const debugPanel = document.getElementById('formatter-debug');
-        if (debugPanel.style.display === 'none') {
-          debugPanel.style.display = 'block';
-          toggleButton.textContent = '隐藏调试';
-        } else {
-          debugPanel.style.display = 'none';
-          toggleButton.textContent = '显示调试';
-        }
-      };
-      document.body.appendChild(toggleButton);
-    } else {
-      window.debugLog = function() {}; // 空函数
-    }
-    
-    // 格式化代码函数
-    function formatCode(code, language) {
-      try {
-        debugLog(`尝试格式化 ${language} 代码`);
-        
-        // 确定Prettier解析器
-        let parser;
-        switch (language) {
-          case 'javascript':
-          case 'js':
-            parser = 'babel';
-            break;
-          case 'typescript':
-          case 'ts':
-            parser = 'typescript';
-            break;
-          case 'css':
-            parser = 'css';
-            break;
-          case 'html':
-            parser = 'html';
-            break;
-          case 'yaml':
-          case 'yml':
-            parser = 'yaml';
-            break;
-          case 'json':
-            parser = 'json';
-            break;
-          case 'markdown':
-          case 'md':
-            parser = 'markdown';
-            break;
-          default:
-            // 对于不支持的语言，返回原始代码
-            debugLog(`不支持的语言: ${language}`);
-            return code;
-        }
-        
-        debugLog(`使用解析器: ${parser}`);
-        
-        // 格式化代码
-        const formatted = prettier.format(code, {
-          parser,
-          printWidth: 80,
-          tabWidth: 2,
-          useTabs: false,
-          semi: true,
-          singleQuote: true,
-          trailingComma: 'es5',
-          bracketSpacing: true,
-        });
-        
-        debugLog(`格式化成功，代码长度: ${formatted.length}`);
-        return formatted;
-      } catch (e) {
-        debugLog(`格式化失败: ${e.message}`);
-        return code; // 如果格式化失败，返回原始代码
+    // 等待CMS加载完成
+    function whenCmsReady(callback) {
+      if (window.CMS) {
+        callback();
+      } else {
+        setTimeout(() => whenCmsReady(callback), 100);
       }
     }
     
-    // 格式化Markdown中的代码块
-    function formatMarkdownCodeBlocks(text) {
-      debugLog(`开始格式化Markdown代码块，文本长度: ${text.length}`);
+    // 在CMS加载完成后加载其他脚本
+    whenCmsReady(() => {
+      // 加载必要的脚本
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js', function() {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js');
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js');
+      });
       
-      // 匹配Markdown代码块的正则表达式 ```language\n code \n```
-      const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
-      
-      let match;
-      let lastIndex = 0;
-      let result = '';
-      
-      let blockCount = 0;
-      
-      // 遍历所有代码块
-      while ((match = codeBlockRegex.exec(text)) !== null) {
-        blockCount++;
-        const fullMatch = match[0];
-        const language = match[1] || 'javascript'; // 默认为javascript
-        const code = match[2];
+      // 加载Prettier
+      loadScript('https://unpkg.com/prettier@2.8.8/standalone.js', function() {
+        loadScript('https://unpkg.com/prettier@2.8.8/parser-babel.js');
+        loadScript('https://unpkg.com/prettier@2.8.8/parser-html.js');
+        loadScript('https://unpkg.com/prettier@2.8.8/parser-postcss.js');
+        loadScript('https://unpkg.com/prettier@2.8.8/parser-markdown.js');
+        loadScript('https://unpkg.com/prettier@2.8.8/parser-yaml.js');
         
-        debugLog(`找到代码块 #${blockCount}: 语言=${language}, 代码长度=${code.length}`);
-        
-        // 添加匹配之前的文本
-        result += text.substring(lastIndex, match.index);
-        
-        // 格式化代码
+        // 脚本都加载完后，初始化格式化功能
+        initFormatter();
+      });
+    });
+    
+    // 函数：加载脚本
+    function loadScript(src, callback) {
+      const script = document.createElement('script');
+      script.src = src;
+      if (callback) {
+        script.onload = callback;
+      }
+      document.body.appendChild(script);
+    }
+    
+    // 初始化格式化功能
+    function initFormatter() {
+      // 代码格式化函数
+      function formatCode(code, language) {
         try {
-          const formattedCode = formatCode(code, language);
-          // 重新组装代码块
-          result += '```' + language + '\n' + formattedCode + '\n```';
-          debugLog(`代码块 #${blockCount} 格式化成功`);
+          // 确定Prettier解析器
+          let parser;
+          switch (language.toLowerCase()) {
+            case 'javascript':
+            case 'js':
+              parser = 'babel';
+              break;
+            case 'typescript':
+            case 'ts':
+              parser = 'typescript';
+              break;
+            case 'css':
+              parser = 'css';
+              break;
+            case 'html':
+              parser = 'html';
+              break;
+            case 'yaml':
+            case 'yml':
+              parser = 'yaml';
+              break;
+            case 'json':
+              parser = 'json';
+              break;
+            case 'markdown':
+            case 'md':
+              parser = 'markdown';
+              break;
+            default:
+              // 对于不支持的语言，保持原样
+              return code;
+          }
+          
+          // 格式化代码
+          const formatted = prettier.format(code, {
+            parser,
+            printWidth: 80,
+            tabWidth: 2,
+            useTabs: false,
+            semi: true,
+            singleQuote: true,
+            trailingComma: 'es5',
+            bracketSpacing: true,
+          });
+          
+          return formatted;
         } catch (e) {
-          // 如果格式化失败，保持原样
-          result += fullMatch;
-          debugLog(`代码块 #${blockCount} 格式化失败: ${e.message}`);
+          console.error('格式化失败:', e);
+          return code; // 如果格式化失败，返回原始代码
         }
-        
-        lastIndex = match.index + fullMatch.length;
       }
       
-      // 添加剩余文本
-      result += text.substring(lastIndex);
-      
-      debugLog(`找到 ${blockCount} 个代码块，格式化完成`);
-      return result;
-    }
-    
-    // 手动添加格式化按钮到Markdown编辑器
-    function addFormatButtonsToMarkdownEditors() {
-      debugLog('搜索Markdown编辑器...');
-      
-      // 查找可能的Markdown编辑器
-      const possibleEditors = document.querySelectorAll('textarea');
-      let editorCount = 0;
-      
-      possibleEditors.forEach(editor => {
-        // 已经添加过按钮的跳过
-        if (editor.dataset.hasFormatButtons) return;
+      // 格式化Markdown中的代码块
+      function formatMarkdownCodeBlocks(markdownText) {
+        if (!markdownText) return markdownText;
         
-        // 检查是否是Markdown编辑器
-        const isMarkdown = isMarkdownEditor(editor);
+        // 匹配代码块的正则表达式：```language\n code \n```
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
         
-        if (isMarkdown) {
-          editorCount++;
-          debugLog(`找到Markdown编辑器 #${editorCount}`);
+        return markdownText.replace(codeBlockRegex, (match, language, code) => {
+          // 如果没有指定语言，默认为javascript
+          const lang = language || 'javascript';
           
-          // 标记为已添加按钮
-          editor.dataset.hasFormatButtons = 'true';
+          try {
+            // 格式化代码
+            const formattedCode = formatCode(code, lang);
+            return '```' + lang + '\n' + formattedCode + '\n```';
+          } catch (e) {
+            console.error('代码块格式化失败:', e);
+            return match; // 保持原样
+          }
+        });
+      }
+      
+      // 添加格式化按钮和快捷键
+      function setupFormatting() {
+        // 查找所有可能的Markdown编辑器
+        const allTextareas = document.querySelectorAll('textarea');
+        
+        allTextareas.forEach(textarea => {
+          // 避免重复添加
+          if (textarea.dataset.formatterSetup) return;
+          
+          textarea.dataset.formatterSetup = 'true';
           
           // 添加快捷键支持
-          editor.addEventListener('keydown', function(e) {
+          textarea.addEventListener('keydown', function(e) {
             // Ctrl+Shift+F 或 Cmd+Shift+F
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
               e.preventDefault();
-              debugLog('检测到快捷键 Ctrl+Shift+F');
-              
-              let mdText = editor.value;
-              let formatted = formatMarkdownCodeBlocks(mdText);
-              editor.value = formatted;
-              
+              const value = textarea.value;
+              textarea.value = formatMarkdownCodeBlocks(value);
               // 触发change事件
-              editor.dispatchEvent(new Event('input', { bubbles: true }));
-              debugLog('完成代码格式化并触发input事件');
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
             }
           });
           
           // 添加格式化按钮
-          const container = document.createElement('div');
-          container.className = 'markdown-format-tools format-controls';
-          
-          const formatButton = document.createElement('button');
-          formatButton.className = 'markdown-format-button';
-          formatButton.textContent = '格式化代码块';
-          formatButton.onclick = function(e) {
-            e.preventDefault();
-            debugLog('点击格式化按钮');
+          const parent = textarea.parentElement;
+          if (parent && !parent.querySelector('.format-button')) {
+            const button = document.createElement('button');
+            button.className = 'format-button';
+            button.textContent = '格式化代码块 (Ctrl+Shift+F)';
+            button.onclick = function(e) {
+              e.preventDefault();
+              textarea.value = formatMarkdownCodeBlocks(textarea.value);
+              // 触发change事件
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            };
             
-            let mdText = editor.value;
-            let formatted = formatMarkdownCodeBlocks(mdText);
-            editor.value = formatted;
-            
-            // 触发change事件
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
-            debugLog('完成代码格式化并触发input事件');
-          };
-          
-          const hint = document.createElement('span');
-          hint.textContent = '快捷键: Ctrl+Shift+F';
-          hint.style.marginLeft = '10px';
-          hint.style.color = '#666';
-          hint.style.fontSize = '12px';
-          
-          container.appendChild(formatButton);
-          container.appendChild(hint);
-          
-          // 插入按钮到编辑器上方
-          const parent = editor.parentNode;
-          if (parent) {
-            parent.insertBefore(container, editor);
-            debugLog('添加格式化按钮成功');
-          }
-        }
-      });
-      
-      debugLog(`总共找到 ${editorCount} 个Markdown编辑器`);
-    }
-    
-    // 检测是否是Markdown编辑器
-    function isMarkdownEditor(editor) {
-      if (!editor) return false;
-      
-      // 检查编辑器ID、Class或周围元素是否包含Markdown相关字符串
-      const editorId = editor.id || '';
-      const editorClass = editor.className || '';
-      const editorNameOrType = editor.name || editor.getAttribute('type') || '';
-      
-      const markdownIdentifiers = ['markdown', 'md-editor', 'md-content', 'md-field'];
-      
-      // 检查编辑器直接属性
-      for (const id of markdownIdentifiers) {
-        if (editorId.toLowerCase().includes(id) ||
-            editorClass.toLowerCase().includes(id) ||
-            editorNameOrType.toLowerCase().includes(id)) {
-          debugLog(`通过直接属性识别为Markdown编辑器: ${id}`);
-          return true;
-        }
-      }
-      
-      // 检查父元素和标签
-      const parent = editor.parentElement;
-      if (parent) {
-        const parentClass = parent.className || '';
-        const parentId = parent.id || '';
-        
-        // 检查父元素
-        for (const id of markdownIdentifiers) {
-          if (parentClass.toLowerCase().includes(id) ||
-              parentId.toLowerCase().includes(id)) {
-            debugLog(`通过父元素识别为Markdown编辑器: ${id}`);
-            return true;
-          }
-        }
-        
-        // 检查相邻的标签
-        const labels = parent.querySelectorAll('label');
-        for (const label of labels) {
-          const labelText = label.textContent.toLowerCase();
-          if (labelText.includes('markdown') || 
-              labelText.includes('内容') || 
-              labelText.includes('正文') ||
-              labelText.includes('描述')) {
-            debugLog(`通过标签识别为Markdown编辑器: ${labelText}`);
-            return true;
-          }
-        }
-      }
-      
-      // 检查编辑器内容是否包含Markdown语法
-      const content = editor.value || '';
-      if (content && content.length > 0) {
-        const markdownPatterns = [
-          /^#\s.*$/m,              // 标题
-          /\[.*\]\(.*\)/,          // 链接
-          /!\[.*\]\(.*\)/,         // 图片
-          /^>\s.*$/m,              // 引用
-          /^[-*+]\s.*$/m,          // 无序列表
-          /^[0-9]+\.\s.*$/m,       // 有序列表
-          /^```[\s\S]*?```$/m,     // 代码块
-          /\*\*.*\*\*/,            // 粗体
-          /\*.*\*/                 // 斜体
-        ];
-        
-        let markdownPatternCount = 0;
-        for (const pattern of markdownPatterns) {
-          if (pattern.test(content)) {
-            markdownPatternCount++;
-          }
-        }
-        
-        // 如果包含多个Markdown语法特征，认为是Markdown编辑器
-        if (markdownPatternCount >= 2) {
-          debugLog(`通过内容识别为Markdown编辑器: ${markdownPatternCount}个Markdown特征`);
-          return true;
-        }
-      }
-      
-      // 如果专门针对某些CMS系统，可以添加特定检测
-      // 针对Decap CMS (Netlify CMS)
-      if (editor.closest('[class*="EditorControlPane"]') || 
-          editor.closest('[class*="WidgetPreviewContainer"]')) {
-        // 检查是否有'body'或'content'字段
-        const nearbyLabels = document.querySelectorAll('label, [class*="FieldLabel"]');
-        for (const label of nearbyLabels) {
-          const labelText = label.textContent.toLowerCase();
-          if (labelText === 'body' || labelText === 'content' || 
-              labelText === '内容' || labelText === '正文') {
-            debugLog(`通过CMS特定标签识别为Markdown编辑器: ${labelText}`);
-            return true;
-          }
-        }
-      }
-      
-      return false;
-    }
-    
-    // 监听DOM变化，为新增的编辑器添加按钮
-    function startObserving() {
-      debugLog('开始监听DOM变化');
-      
-      // 先检查当前页面的编辑器
-      addFormatButtonsToMarkdownEditors();
-      
-      // 创建一个观察器实例
-      const observer = new MutationObserver((mutations) => {
-        // 当DOM变化时，检查是否有新的Markdown编辑器
-        let hasNewEditor = false;
-        
-        mutations.forEach(mutation => {
-          if (mutation.type === 'childList' && mutation.addedNodes.length) {
-            hasNewEditor = true;
+            parent.insertBefore(button, textarea);
           }
         });
-        
-        if (hasNewEditor) {
-          debugLog('检测到DOM变化，寻找新的编辑器');
-          addFormatButtonsToMarkdownEditors();
-        }
+      }
+      
+      // 持续监控DOM变化，为新添加的编辑器添加格式化功能
+      const observer = new MutationObserver((mutations) => {
+        setupFormatting();
       });
       
-      // 配置观察选项
-      const config = { childList: true, subtree: true };
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
       
-      // 开始观察document.body的所有子节点变化
-      observer.observe(document.body, config);
+      // 立即为现有编辑器添加格式化功能
+      setupFormatting();
+      
+      // 每隔2秒检查一次，确保按钮正确添加
+      setInterval(setupFormatting, 2000);
+      
+      // 控制台提示已加载
+      console.log('代码格式化功能已加载 - 使用Ctrl+Shift+F格式化代码块');
     }
-    
-    // 监听Netlify CMS加载完成事件
-    document.addEventListener('DOMContentLoaded', function() {
-      debugLog('页面加载完成，等待CMS初始化');
-      
-      // 初始尝试添加按钮
-      setTimeout(addFormatButtonsToMarkdownEditors, 1000);
-      
-      // 检查CMS是否已加载
-      if (window.CMS) {
-        debugLog('CMS已加载，开始设置');
-        startObserving();
-      } else {
-        debugLog('等待CMS加载');
-        // 等待CMS加载
-        const cmsCheck = setInterval(() => {
-          if (window.CMS) {
-            clearInterval(cmsCheck);
-            debugLog('CMS已加载，开始设置');
-            startObserving();
-            
-            // 注册一个自定义预览组件用于高亮显示
-            const PostPreview = createClass({
-              render() {
-                const entry = this.props.entry;
-                const title = entry.getIn(['data', 'title']) || '';
-                return h('div', {}, 
-                  h('h1', {}, title),
-                  h('div', { className: 'content-preview' }, this.props.widgetFor('body'))
-                );
-              },
-              
-              componentDidMount() {
-                this.highlightCodeBlocks();
-              },
-              
-              componentDidUpdate() {
-                this.highlightCodeBlocks();
-              },
-              
-              highlightCodeBlocks() {
-                debugLog('高亮预览中的代码块');
-                if (window.Prism) {
-                  const blocks = document.querySelectorAll('pre code');
-                  blocks.forEach(block => {
-                    Prism.highlightElement(block);
-                  });
-                }
-              }
-            });
-            
-            // 注册预览模板
-            window.CMS.registerPreviewTemplate('posts', PostPreview);
-            window.CMS.registerPreviewTemplate('blog', PostPreview);
-            window.CMS.registerPreviewTemplate('pages', PostPreview);
-            
-            // 注册预览样式
-            window.CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
-          }
-        }, 100);
-      }
-    });
-    
-    // 定期检查是否有新的Markdown编辑器
-    setInterval(addFormatButtonsToMarkdownEditors, 2000);
-    
-    // 手动格式化按钮 - 添加到全局
-    function createGlobalFormatButton() {
-      // 检查是否已经存在
-      if (document.getElementById('global-format-button')) return;
-      
-      const button = document.createElement('button');
-      button.id = 'global-format-button';
-      button.textContent = '格式化当前编辑器代码';
-      button.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 9999;
-        padding: 8px 16px;
-        background: #4a8fee;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      `;
-      
-      button.onclick = function() {
-        debugLog('点击全局格式化按钮');
-        
-        // 查找当前激活的编辑器
-        const activeEditor = document.activeElement;
-        if (activeEditor && activeEditor.tagName === 'TEXTAREA') {
-          debugLog('找到活动编辑器');
-          
-          let mdText = activeEditor.value;
-          let formatted = formatMarkdownCodeBlocks(mdText);
-          activeEditor.value = formatted;
-          
-          // 触发change事件
-          activeEditor.dispatchEvent(new Event('input', { bubbles: true }));
-          debugLog('完成代码格式化并触发input事件');
-        } else {
-          debugLog('未找到活动的编辑器');
-          alert('请先点击要格式化的编辑器');
-        }
-      };
-      
-      document.body.appendChild(button);
-    }
-    
-    // 10秒后添加全局按钮，确保CMS已完全加载
-    setTimeout(createGlobalFormatButton, 10000);
   </script>
 </body>
 </html>
