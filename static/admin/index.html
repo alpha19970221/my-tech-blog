@@ -90,5 +90,15 @@
       }
     });
   </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 测试 Prism.js 是否加载
+    if (typeof Prism !== 'undefined') {
+      console.log('Prism.js 已加载');
+    } else {
+      console.error('Prism.js 未加载');
+    }
+  });
+</script>
 </body>
 </html>
