@@ -2,44 +2,96 @@
  * 代码格式化功能
  */
 
-// 确保已加载所有需要的Prettier解析器插件
-document.addEventListener('DOMContentLoaded', () => {
-  // 检查是否已加载解析器
-  if (typeof prettier !== 'undefined' && !prettier.parsers.html) {
-    // 加载缺少的解析器
-    loadPrettierPlugins();
-  }
-});
-
-// 加载Prettier插件
-const loadPrettierPlugins = () => {
-  const plugins = [
-    'https://unpkg.com/prettier@2.8.8/parser-babel.js',
-    'https://unpkg.com/prettier@2.8.8/parser-html.js',
-    'https://unpkg.com/prettier@2.8.8/parser-typescript.js',
-    'https://unpkg.com/prettier@2.8.8/parser-markdown.js',
-    'https://unpkg.com/prettier@2.8.8/parser-postcss.js', // 用于CSS
-    'https://unpkg.com/prettier@2.8.8/parser-yaml.js',
-    'https://unpkg.com/prettier@2.8.8/parser-json.js'
-  ];
-  
-  let loadedCount = 0;
-  
-  plugins.forEach(url => {
+// 检查并加载Prettier库及其插件
+const loadPrettier = () => {
+  return new Promise((resolve, reject) => {
+    // 检查Prettier是否已加载
+    if (typeof prettier !== 'undefined') {
+      console.log('Prettier已加载');
+      resolve();
+      return;
+    }
+    
+    console.log('正在加载Prettier库...');
+    
+    // 加载Prettier核心库
     const script = document.createElement('script');
-    script.src = url;
+    script.src = 'https://unpkg.com/prettier@2.8.8/standalone.js';
     script.onload = () => {
-      loadedCount++;
-      if (loadedCount === plugins.length) {
-        console.log('所有Prettier解析器已加载完成');
-      }
+      console.log('Prettier核心库加载成功');
+      // 加载所需的解析器
+      loadPrettierPlugins().then(resolve).catch(reject);
     };
     script.onerror = (e) => {
-      console.error('加载Prettier解析器失败:', url, e);
+      console.error('加载Prettier库失败:', e);
+      reject(e);
     };
     document.head.appendChild(script);
   });
 };
+
+// 加载Prettier解析器插件
+const loadPrettierPlugins = () => {
+  return new Promise((resolve, reject) => {
+    const plugins = [
+      { name: 'babel', url: 'https://unpkg.com/prettier@2.8.8/parser-babel.js' },
+      { name: 'html', url: 'https://unpkg.com/prettier@2.8.8/parser-html.js' },
+      { name: 'typescript', url: 'https://unpkg.com/prettier@2.8.8/parser-typescript.js' },
+      { name: 'markdown', url: 'https://unpkg.com/prettier@2.8.8/parser-markdown.js' },
+      { name: 'postcss', url: 'https://unpkg.com/prettier@2.8.8/parser-postcss.js' }, // 用于CSS
+      { name: 'yaml', url: 'https://unpkg.com/prettier@2.8.8/parser-yaml.js' },
+      { name: 'json', url: 'https://unpkg.com/prettier@2.8.8/parser-json.js' }
+    ];
+    
+    let loadedCount = 0;
+    let errors = [];
+    
+    plugins.forEach(plugin => {
+      const script = document.createElement('script');
+      script.src = plugin.url;
+      script.onload = () => {
+        console.log(`解析器 ${plugin.name} 加载成功`);
+        loadedCount++;
+        if (loadedCount === plugins.length) {
+          console.log('所有Prettier解析器已加载完成');
+          resolve();
+        }
+      };
+      script.onerror = (e) => {
+        console.error(`加载解析器 ${plugin.name} 失败:`, e);
+        errors.push(plugin.name);
+        loadedCount++;
+        if (loadedCount === plugins.length) {
+          if (errors.length > 0) {
+            console.warn(`部分解析器加载失败: ${errors.join(', ')}`);
+          }
+          resolve(); // 即使有错误也继续
+        }
+      };
+      document.head.appendChild(script);
+    });
+  });
+};
+
+// 初始化函数
+const initFormatter = () => {
+  console.log('正在初始化代码格式化器...');
+  loadPrettier()
+    .then(() => {
+      console.log('代码格式化器初始化完成');
+      // 可以在这里添加额外的初始化逻辑
+    })
+    .catch(error => {
+      console.error('初始化代码格式化器失败:', error);
+    });
+};
+
+// 在页面加载完成后初始化
+if (document.readyState === 'complete') {
+  initFormatter();
+} else {
+  window.addEventListener('load', initFormatter);
+}
 
 // 代码格式化函数
 const formatCode = (code, language) => {
@@ -47,6 +99,8 @@ const formatCode = (code, language) => {
     // 确保Prettier已加载
     if (typeof prettier === 'undefined') {
       console.error('Prettier库未加载');
+      // 尝试加载Prettier
+      loadPrettier().catch(e => console.error('尝试加载Prettier失败:', e));
       return code;
     }
     
@@ -88,9 +142,8 @@ const formatCode = (code, language) => {
     }
     
     // 检查解析器是否可用
-    if (!prettier.parsers[parser]) {
-      console.warn(`Prettier解析器 "${parser}" 不可用，正在尝试加载...`);
-      loadPrettierPlugins();
+    if (!prettier.parsers || !prettier.parsers[parser]) {
+      console.warn(`Prettier解析器 "${parser}" 不可用`);
       return code; // 临时返回原始代码
     }
 
@@ -142,6 +195,19 @@ const formatMarkdownCodeBlocks = (markdown) => {
 // 格式化当前编辑器内容
 const formatCurrentCode = (textarea, language = 'javascript') => {
   if (!textarea) return;
+  
+  // 确保Prettier已加载
+  if (typeof prettier === 'undefined') {
+    console.warn('Prettier尚未加载，正在尝试加载...');
+    loadPrettier().then(() => {
+      // 加载成功后重试格式化
+      formatCurrentCode(textarea, language);
+    }).catch(e => {
+      console.error('加载Prettier失败，无法格式化代码:', e);
+      alert('加载代码格式化工具失败，请刷新页面重试');
+    });
+    return;
+  }
   
   const value = textarea.value;
   const selection = {
