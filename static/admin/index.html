@@ -183,7 +183,7 @@
                   html = html
                     .replace(/\\b(function|return|if|else|for|while|var|let|const|class|import|export)\\b/g, '<span class="token keyword">$1</span>')
                     .replace(/\\b(true|false|null|undefined)\\b/g, '<span class="token boolean">$1</span>')
-                    .replace(/("[^"]*"|'[^']*'|\\`[^\\`]*\\`)/g, '<span class="token string">$1</span>')
+                    .replace(/("[^"]*"|'[^']*'|\`[^\`]*\`)/, '<span class="token string">$1</span>')
                     .replace(/\\b(\\d+)\\b/g, '<span class="token number">$1</span>')
                     .replace(/\\/\\/.*/g, '<span class="token comment">$&</span>')
                     .replace(/\\/\\*[\\s\\S]*?\\*\\//g, '<span class="token comment">$&</span>');
@@ -191,7 +191,7 @@
                   html = html
                     .replace(/\\b(def|class|import|from|return|if|elif|else|for|while|with|as|try|except|finally)\\b/g, '<span class="token keyword">$1</span>')
                     .replace(/\\b(True|False|None)\\b/g, '<span class="token boolean">$1</span>')
-                    .replace(/("[^"]*"|'[^']*'|\\`[^\\`]*\\`)/g, '<span class="token string">$1</span>')
+                    .replace(/("[^"]*"|'[^']*'|\`[^\`]*\`)/, '<span class="token string">$1</span>')
                     .replace(/\\b(\\d+)\\b/g, '<span class="token number">$1</span>')
                     .replace(/#.*/g, '<span class="token comment">$&</span>');
                 } else if (['css'].includes(language)) {
