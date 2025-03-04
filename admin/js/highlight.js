@@ -103,25 +103,40 @@ const injectPrismToIframe = (iframe) => {
     `;
     doc.head.appendChild(customStyle);
     
-    // 注入完整的Prism脚本
+    // 注入Prism核心
     const script = doc.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
     script.onload = () => {
-      console.log('Prism已加载到iframe');
+      console.log('Prism核心已加载到iframe');
       
-      // 顺序加载所有语言文件
-      loadLanguagesSequentiallyForIframe(doc).then(() => {
-        console.log('iframe中所有语言支持已加载');
+      // 加载自动加载器
+      const autoloaderScript = doc.createElement('script');
+      autoloaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
+      autoloaderScript.onload = () => {
+        console.log('iframe: Prism自动加载器已加载');
         
-        // 触发高亮
+        // 配置自动加载器
         setTimeout(() => {
           try {
-            highlightCode(doc);
+            if (doc.defaultView && doc.defaultView.Prism && doc.defaultView.Prism.plugins && doc.defaultView.Prism.plugins.autoloader) {
+              doc.defaultView.Prism.plugins.autoloader.languages_path = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/';
+              console.log('iframe: Prism自动加载器已配置');
+            }
+            
+            // 触发高亮
+            setTimeout(() => {
+              try {
+                highlightCode(doc);
+              } catch (e) {
+                console.error('iframe中的高亮失败:', e);
+              }
+            }, 100);
           } catch (e) {
-            console.error('iframe中的高亮失败:', e);
+            console.error('配置iframe中的Prism自动加载器失败:', e);
           }
-        }, 100);
-      });
+        }, 50);
+      };
+      doc.body.appendChild(autoloaderScript);
     };
     doc.body.appendChild(script);
     
@@ -217,6 +232,7 @@ const highlightMarkdownPreview = (previewContainer) => {
 };
 
 // 加载Prism到主文档
+// 加载Prism到主文档
 const loadPrismToDocument = () => {
   if (window.Prism) {
     console.log('Prism已加载到主文档');
@@ -238,20 +254,32 @@ const loadPrismToDocument = () => {
     fontLink.href = 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap';
     document.head.appendChild(fontLink);
     
-    // 加载完整的Prism
+    // 加载包含所有组件的Prism打包版本，而不是分开加载核心和语言
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
     script.onload = () => {
-      console.log('完整的Prism已加载到主文档');
+      console.log('Prism核心已加载到主文档');
       
-      // 顺序加载所有语言文件
-      loadLanguagesSequentially().then(() => {
-        console.log('所有语言支持已加载');
+      // 加载所有组件的包
+      const allScript = document.createElement('script');
+      allScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
+      allScript.onload = () => {
+        console.log('Prism自动加载器已加载');
+        
+        // 配置自动加载器
+        if (window.Prism && window.Prism.plugins && window.Prism.plugins.autoloader) {
+          Prism.plugins.autoloader.languages_path = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/';
+          console.log('Prism自动加载器已配置');
+        }
+        
+        // 解析完成
         resolve();
-      }).catch(e => {
-        console.warn('加载语言支持出错，但继续', e);
-        resolve(); // 即使有错误也resolve，避免阻塞
-      });
+      };
+      allScript.onerror = (e) => {
+        console.warn('加载Prism自动加载器失败，但继续', e);
+        resolve(); // 即使失败也resolve，避免阻塞
+      };
+      document.body.appendChild(allScript);
     };
     script.onerror = (e) => {
       console.error('加载Prism失败:', e);
