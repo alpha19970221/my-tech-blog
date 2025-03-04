@@ -15,4 +15,22 @@ function PostPreview(props) {
 }
 
 // 注册预览模板，确保 'posts' 与 config.yml 中定义的集合名称一致
-CMS.registerPreviewTemplate("posts", PostPreview);
+// CMS.registerPreviewTemplate("posts", PostPreview);
+CMS.registerPreviewTemplate("posts", function (props) {
+  var data = props.entry.toJS();
+  var container = document.createElement("div");
+  container.innerHTML = props.widgetFor("body");
+
+  setTimeout(function () {
+    document.querySelectorAll("pre code[class^='language-']").forEach(function (codeBlock) {
+      let pre = codeBlock.parentElement;
+      if (!pre.classList.contains(codeBlock.classList[0])) {
+        pre.classList.add(codeBlock.classList[0]); // 让 <pre> 继承 <code> 的 class
+      }
+    });
+
+    Prism.highlightAll();
+  }, 0);
+
+  return container;
+});
