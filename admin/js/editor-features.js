@@ -1,79 +1,13 @@
 /**
- * 编辑器增强功能 - 适配DecapCMS
+ * 编辑器增强功能
  */
 
-// 保留原始函数的引用，如果存在的话
-const originalFindAndEnhanceEditors = typeof findAndEnhanceEditors === 'function' ? findAndEnhanceEditors : null;
-const originalEnhanceTextarea = typeof enhanceTextarea === 'function' ? enhanceTextarea : null;
-
-/**
- * 查找并增强所有代码编辑框
- */
-const findAndEnhanceEditors = () => {
-  console.log('查找并增强编辑器...');
-  
-  // 调用原始函数(如果存在)
-  if (originalFindAndEnhanceEditors) {
-    originalFindAndEnhanceEditors();
-  }
-  
-  // 查找DecapCMS的编辑器
-  const decapSelectors = [
-    // Markdown编辑器
-    '.CodeMirror textarea',
-    '[data-slate-editor="true"]',
-    '.cm-content', // CodeMirror 6
-    '.ProseMirror',
-    
-    // 常规编辑器
-    '.netlify-cms-widget-markdown textarea',
-    '.netlify-cms-widget-text textarea',
-    '.netlify-cms-widget-code textarea',
-    
-    // 通用回退选择器
-    '.widget-area textarea',
-    '.cms-editor-component textarea',
-    '[class*="cms"] textarea',
-    '.widget-ui-pane textarea'
-  ];
-  
-  // 遍历所有可能的编辑器
-  decapSelectors.forEach(selector => {
-    document.querySelectorAll(selector).forEach(editor => {
-      console.log('找到编辑器:', editor);
-      enhanceTextarea(editor);
-    });
-  });
-  
-  // 以下是原始代码中的逻辑，保留以兼容现有调用
-  const widgets = document.querySelectorAll('[class*="WidgetPreviewContainer"]');
-  widgets.forEach(widget => {
-    const textareas = widget.querySelectorAll('textarea');
-    textareas.forEach(enhanceTextarea);
-  });
-  
-  // 特别查找可能的Markdown编辑器
-  const mdEditors = document.querySelectorAll('textarea[class*="markdown"], textarea[class*="Markdown"], textarea[class*="md-editor"]');
-  mdEditors.forEach(enhanceTextarea);
-  
-  // 查找通用编辑器
-  const editors = document.querySelectorAll('textarea[class*="Editor"], [class*="editor"] textarea');
-  editors.forEach(enhanceTextarea);
-};
-
-/**
- * 添加编辑器增强功能
- */
+// 添加编辑器增强功能
 const enhanceTextarea = (textarea) => {
-  // 调用原始函数(如果存在)
-  if (originalEnhanceTextarea) {
-    originalEnhanceTextarea(textarea);
-  }
+  if (!textarea || textarea.dataset.formatterAttached) return;
   
-  if (!textarea || textarea.dataset.formatterExtended) return;
-  
-  console.log('增强编辑器:', textarea);
-  textarea.dataset.formatterExtended = 'true';
+  textarea.dataset.formatterAttached = 'true';
+  textarea.classList.add('code-editor');
   
   // 添加键盘快捷键 (Ctrl+Shift+F 格式化代码)
   textarea.addEventListener('keydown', (e) => {
@@ -84,6 +18,34 @@ const enhanceTextarea = (textarea) => {
       formatCurrentCode(textarea, language);
     }
   });
+  
+  // 检查是否是Markdown编辑器，添加专门的格式化按钮
+  if (isMarkdownEditor(textarea)) {
+    addMarkdownFormatButton(textarea);
+  } else {
+    // 为非Markdown编辑器添加常规格式化按钮
+    const addFormatButton = () => {
+      const container = textarea.parentElement;
+      if (!container) return;
+      
+      // 检查是否已添加按钮
+      if (container.querySelector('.format-button')) return;
+      
+      const button = document.createElement('button');
+      button.className = 'format-button';
+      button.textContent = '格式化代码 (Ctrl+Shift+F)';
+      button.onclick = (e) => {
+        e.preventDefault();
+        const language = determineLanguage(textarea);
+        formatCurrentCode(textarea, language);
+      };
+      
+      container.insertBefore(button, textarea);
+    };
+    
+    // 尝试添加按钮
+    setTimeout(addFormatButton, 500);
+  }
   
   // 添加自动缩进功能
   textarea.addEventListener('keydown', (e) => {
@@ -393,155 +355,19 @@ const isInsideCodeBlock = (text, cursorPos) => {
   };
 };
 
-// 格式化当前代码
-const formatCurrentCode = (textarea, language) => {
-  console.log(`格式化代码，语言: ${language}`);
-  // 此处应该调用具体的格式化逻辑
-  // 如果有引入prettier等库，可以在这里调用
+// 查找并增强所有代码编辑框
+const findAndEnhanceEditors = () => {
+  const widgets = document.querySelectorAll('[class*="WidgetPreviewContainer"]');
+  widgets.forEach(widget => {
+    const textareas = widget.querySelectorAll('textarea');
+    textareas.forEach(enhanceTextarea);
+  });
   
-  // 简单格式化示例 (实际应使用专业库如prettier)
-  let code = textarea.value;
+  // 特别查找可能的Markdown编辑器
+  const mdEditors = document.querySelectorAll('textarea[class*="markdown"], textarea[class*="Markdown"], textarea[class*="md-editor"]');
+  mdEditors.forEach(enhanceTextarea);
   
-  // 仅作为演示的简单格式化逻辑
-  if (language === 'javascript' || language === 'typescript' || language === 'json') {
-    try {
-      // 简易JS格式化
-      code = basicJSFormat(code);
-      textarea.value = code;
-      
-      // 触发change事件
-      const event = new Event('input', { bubbles: true });
-      textarea.dispatchEvent(event);
-      
-      console.log('代码格式化完成');
-    } catch (e) {
-      console.error('格式化失败:', e);
-    }
-  }
+  // 查找通用编辑器
+  const editors = document.querySelectorAll('textarea[class*="Editor"], [class*="editor"] textarea');
+  editors.forEach(enhanceTextarea);
 };
-
-// 简易JS代码格式化 (仅用于演示，实际应使用专业库)
-const basicJSFormat = (code) => {
-  if (!code) return code;
-  
-  // 移除多余空行
-  code = code.replace(/\n\s*\n\s*\n/g, '\n\n');
-  
-  // 简单缩进处理 (非常基础的实现)
-  let formatted = '';
-  let indent = 0;
-  let lines = code.split('\n');
-  
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i].trim();
-    
-    // 闭合括号减少缩进
-    if (line.startsWith('}') || line.startsWith(']') || line.startsWith(')')) {
-      indent = Math.max(0, indent - 1);
-    }
-    
-    // 添加当前行和适当的缩进
-    if (line.length > 0) {
-      formatted += ' '.repeat(indent * 2) + line + '\n';
-    } else {
-      formatted += '\n'; // 保留空行
-    }
-    
-    // 开括号增加缩进
-    if (line.endsWith('{') || line.endsWith('[') || line.endsWith('(')) {
-      indent++;
-    }
-    
-    // 特殊处理 } else { 这种情况
-    if (line.endsWith('}') && i < lines.length - 1 && 
-        lines[i+1].trim().startsWith('else')) {
-      indent++;
-    }
-  }
-  
-  return formatted;
-};
-
-// 确定编辑器语言
-const determineLanguage = (textarea) => {
-  // 尝试从上下文确定语言类型
-  const filename = getFilenameFromContext(textarea);
-  if (filename) {
-    const extension = filename.split('.').pop().toLowerCase();
-    const languageMap = {
-      'js': 'javascript',
-      'ts': 'typescript',
-      'py': 'python',
-      'html': 'html',
-      'css': 'css',
-      'json': 'json',
-      'md': 'markdown'
-    };
-    
-    if (extension in languageMap) {
-      return languageMap[extension];
-    }
-  }
-  
-  // 检查是否在代码块内
-  const value = textarea.value;
-  const cursorPos = textarea.selectionStart;
-  const codeBlockMatch = isInsideCodeBlock(value, cursorPos);
-  
-  if (codeBlockMatch && codeBlockMatch.language) {
-    return codeBlockMatch.language;
-  }
-  
-  // 如果是Markdown编辑器，默认返回markdown
-  if (isMarkdownEditor(textarea)) {
-    return 'markdown';
-  }
-  
-  // 默认返回纯文本
-  return 'text';
-};
-
-// 从上下文中获取文件名
-const getFilenameFromContext = (textarea) => {
-  // 尝试从页面元素获取当前正在编辑的文件名
-  const container = textarea.closest('[class*="Editor"]') || textarea.closest('[class*="editor"]');
-  if (!container) return null;
-  
-  // 查找可能包含文件名的元素
-  const filenameElem = container.querySelector('[class*="filename"], [class*="file-name"], [class*="title"]');
-  return filenameElem ? filenameElem.textContent.trim() : null;
-};
-
-// 初始化函数 - 兼容模式启动
-const initializeEnhancedEditors = () => {
-  console.log('编辑器增强功能已加载 - 兼容模式');
-  
-  // 定期检查新的编辑器
-  setInterval(() => {
-    // 查找DecapCMS的编辑器
-    const decapSelectors = [
-      // Markdown编辑器
-      '.CodeMirror textarea',
-      '[data-slate-editor="true"]',
-      '.cm-content', // CodeMirror 6
-      '.ProseMirror',
-      '.netlify-cms-widget-markdown textarea'
-    ];
-    
-    // 遍历所有可能的编辑器
-    decapSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(editor => {
-        if (!editor.dataset.formatterExtended) {
-          enhanceTextarea(editor);
-        }
-      });
-    });
-  }, 2000);
-};
-
-// 在现有功能之外启动我们的增强功能
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  initializeEnhancedEditors();
-} else {
-  window.addEventListener('DOMContentLoaded', initializeEnhancedEditors);
-}
