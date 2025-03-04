@@ -109,6 +109,9 @@ const injectPrismToIframe = (iframe) => {
     script.onload = () => {
       console.log('Prism已加载到iframe');
       
+      // 加载额外的语言支持 - 添加C, C++, C#
+      loadAdditionalLanguagesForIframe(doc);
+      
       // 触发高亮
       setTimeout(() => {
         try {
@@ -116,13 +119,48 @@ const injectPrismToIframe = (iframe) => {
         } catch (e) {
           console.error('iframe中的高亮失败:', e);
         }
-      }, 100);
+      }, 300); // 增加延迟，确保语言文件加载完成
     };
     doc.body.appendChild(script);
     
   } catch (e) {
     console.error('注入Prism到iframe失败:', e);
   }
+};
+
+// 为iframe加载额外的语言支持
+const loadAdditionalLanguagesForIframe = (doc) => {
+  // 要加载的语言文件
+  const languages = [
+    'javascript',
+    'c',
+    'cpp',
+    'csharp',
+    'css',
+    'markup', // HTML
+    'python',
+    'bash',
+    'yaml',
+    'json',
+    'typescript',
+    'jsx'
+  ];
+  
+  // 加载每种语言的支持
+  languages.forEach(lang => {
+    // 对于HTML，Prism使用markup作为文件名
+    const fileName = lang === 'html' ? 'markup' : lang;
+    
+    const langScript = doc.createElement('script');
+    langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${fileName}.min.js`;
+    
+    // 不阻塞，静默加载
+    langScript.onerror = () => {
+      console.warn(`无法加载语言支持: ${lang}`);
+    };
+    
+    doc.body.appendChild(langScript);
+  });
 };
 
 // 高亮Markdown预览中的代码块
@@ -184,18 +222,14 @@ const loadPrismToDocument = () => {
     script.onload = () => {
       console.log('完整的Prism已加载到主文档');
       
-      // 加载额外的JavaScript语言支持
-      const jsScript = document.createElement('script');
-      jsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js';
-      jsScript.onload = () => {
-        console.log('JavaScript语法支持已加载');
+      // 加载所有需要的语言支持
+      loadAdditionalLanguages().then(() => {
+        console.log('所有语言支持已加载');
         resolve();
-      };
-      jsScript.onerror = (e) => {
-        console.warn('加载JavaScript语法支持失败，但继续', e);
-        resolve(); // 即使失败也resolve，避免阻塞
-      };
-      document.body.appendChild(jsScript);
+      }).catch(e => {
+        console.warn('加载语言支持出错，但继续', e);
+        resolve(); // 即使有错误也resolve，避免阻塞
+      });
     };
     script.onerror = (e) => {
       console.error('加载Prism失败:', e);
@@ -205,8 +239,58 @@ const loadPrismToDocument = () => {
   });
 };
 
+// 加载额外的语言支持
+const loadAdditionalLanguages = () => {
+  return new Promise((resolve) => {
+    // 要加载的语言文件
+    const languages = [
+      'javascript',
+      'c',
+      'cpp',
+      'csharp',
+      'css',
+      'markup', // HTML
+      'python',
+      'bash',
+      'yaml',
+      'json',
+      'typescript',
+      'jsx'
+    ];
+    
+    let loaded = 0;
+    const total = languages.length;
+    
+    // 处理加载完成
+    const handleLoaded = () => {
+      loaded++;
+      if (loaded >= total) {
+        resolve();
+      }
+    };
+    
+    // 加载每种语言的支持
+    languages.forEach(lang => {
+      // 对于HTML，Prism使用markup作为文件名
+      const fileName = lang === 'html' ? 'markup' : lang;
+      
+      const langScript = document.createElement('script');
+      langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${fileName}.min.js`;
+      langScript.onload = handleLoaded;
+      langScript.onerror = () => {
+        console.warn(`无法加载语言支持: ${lang}`);
+        handleLoaded(); // 即使失败也计数，避免阻塞
+      };
+      
+      document.body.appendChild(langScript);
+    });
+  });
+};
+
 // 暴露为全局函数
 window.highlightCode = highlightCode;
 window.injectPrismToIframe = injectPrismToIframe;
 window.highlightMarkdownPreview = highlightMarkdownPreview;
 window.loadPrismToDocument = loadPrismToDocument;
+window.loadAdditionalLanguages = loadAdditionalLanguages;
+window.loadAdditionalLanguagesForIframe = loadAdditionalLanguagesForIframe;
