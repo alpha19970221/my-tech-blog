@@ -4,8 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>内容管理系统</title>
+  
+  <!-- React 和相关依赖 -->
+  <script src="https://unpkg.com/react@16.13.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@16.13.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15.7.2/prop-types.min.js"></script>
+  
+  <!-- Emotion 库 -->
+  <script src="https://unpkg.com/@emotion/core@10.0.35/dist/core.umd.min.js"></script>
+  <script src="https://unpkg.com/@emotion/styled@10.0.27/dist/styled.umd.min.js"></script>
+  
+  <!-- Netlify Identity -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
   <!-- Decap CMS 的样式 -->
-  <link href="https://unpkg.com/decap-cms@^3.0.0/dist/cms.css" rel="stylesheet" />
+  <link href="https://unpkg.com/netlify-cms@2.10.192/dist/cms.css" rel="stylesheet" />
+  
   <!-- 自定义样式 -->
   <style>
     /* 格式化按钮的样式 */
@@ -47,10 +61,12 @@
       transition: opacity 0.3s;
     }
   </style>
+  
   <!-- Ace 编辑器的扩展 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-beautify.js"></script>
+  
   <!-- 格式化工具依赖 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.0/beautify-html.min.js"></script>
@@ -58,9 +74,11 @@
 </head>
 <body>
   <!-- Decap CMS 的主脚本 -->
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
+  
   <!-- Code 小部件 -->
-  <script src="https://unpkg.com/netlify-cms-widget-code@^1.0.0/dist/netlify-cms-widget-code.js"></script>
+  <script src="https://unpkg.com/netlify-cms-widget-code@1.2.0/dist/netlify-cms-widget-code.js"></script>
+  
   <!-- 增强版编辑器代码 -->
   <script src="./enhanced-editor.js"></script>
 </body>
