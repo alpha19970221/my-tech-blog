@@ -1,0 +1,38 @@
+backend:
+  name: github
+  repo: Alpha19970221/my-tech-blog
+  branch: main
+  auth_scope: repo
+
+# 添加这一行，指定文件格式
+# 如果你的 Hugo 使用 TOML，则改为 toml
+media_folder: "static/images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+  - name: "posts"
+    label: "文章"
+    folder: "content/posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    # 添加这一行，指定内容使用 YAML 格式的 front-matter
+    format: "yaml" 
+    fields:
+      - { label: "标题", name: "title", widget: "string" }
+      - { label: "发布日期", name: "date", widget: "datetime", format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
+      - { label: "更新日期", name: "lastmod", widget: "datetime", format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false, required: false }
+      - { label: "草稿", name: "draft", widget: "boolean", default: false, required: false }
+      - { label: "文章描述", name: "description", widget: "text", required: false }
+      - { label: "特色图片", name: "featuredImage", widget: "image", required: false }
+      - { label: "分类", name: "categories", widget: "list", required: false }
+      - { label: "标签", name: "tags", widget: "list", required: false }
+      - { label: "内容", name: "body", widget: "markdown" }
+
+  - name: "pages"
+    label: "页面"
+    folder: "content"
+    create: true
+    format: "yaml" # 同样为页面指定格式
+    fields:
+      - { label: "标题", name: "title", widget: "string" }
+      - { label: "内容", name: "body", widget: "markdown" }
