@@ -37,6 +37,13 @@ const formatCode = (code, language) => {
       case 'json':
         parser = 'json';
         break;
+      case 'c':
+      case 'cpp':
+      case 'c++':
+        return await formatWithClangFormat(code);
+      case 'csharp':
+      case 'cs':
+        return await formatWithCsharpier(code);
       default:
         // 对于不支持的语言，返回原始代码
         return code;
@@ -60,6 +67,38 @@ const formatCode = (code, language) => {
   } catch (e) {
     console.error('格式化代码失败:', e);
     // 返回原始代码
+    return code;
+  }
+};
+
+// 使用 Web API 进行 C/C++ 代码格式化
+const formatWithClangFormat = async (code) => {
+  try {
+    const response = await fetch('https://clang-format-web-api.com/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, style: 'Google' })
+    });
+    const result = await response.text();
+    return result;
+  } catch (error) {
+    console.warn('Clang-Format API 请求失败:', error);
+    return code;
+  }
+};
+
+// 使用 Web API 进行 C# 代码格式化
+const formatWithCsharpier = async (code) => {
+  try {
+    const response = await fetch('https://csharpier-web-api.com/format', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const result = await response.text();
+    return result;
+  } catch (error) {
+    console.warn('CSharpier API 请求失败:', error);
     return code;
   }
 };
