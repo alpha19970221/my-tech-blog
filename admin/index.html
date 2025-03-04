@@ -5,353 +5,202 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>内容管理</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  
-  <!-- 添加 Prism.js CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
-  
-  <!-- 自定义样式 -->
-  <style>
-    /* 确保代码块样式清晰可见 */
-    pre[class*="language-"] {
-      background: #2d2d2d;
-      color: #ccc;
-      padding: 1em;
-      margin: 1em 0;
-      border-radius: 5px;
-      overflow: auto;
-    }
-
-    code[class*="language-"] {
-      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-      text-align: left;
-      white-space: pre;
-      word-spacing: normal;
-      word-break: normal;
-      word-wrap: normal;
-      line-height: 1.5;
-      tab-size: 4;
-    }
-  </style>
 </head>
 <body>
-  <!-- Decap CMS -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-  
-  <!-- Prism.js 和语言支持 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
   
   <script>
-    // 预览组件 - 增加对高亮的支持
-    const PostPreview = createClass({
-      componentDidMount() {
-        console.log('预览组件已挂载');
-        this.injectPrism();
-      },
+    // 简单的即时高亮处理器
+    const highlightCode = (doc) => {
+      if (!doc) return;
       
-      componentDidUpdate() {
-        console.log('预览组件已更新');
-        this.injectPrism();
-      },
-      
-      // 注入 Prism 到预览窗格
-      injectPrism() {
-        // 短延迟后尝试高亮
-        setTimeout(() => {
-          try {
-            // 尝试找到当前组件的 DOM 元素
-            const previewPane = document.querySelector('.frame-content') || 
-                               document.querySelector('.cms-preview-pane') ||
-                               document.querySelector('[class*="PreviewPaneFrame"]');
-                               
-            if (previewPane) {
-              // 如果找到预览窗格，检查是否有 iframe
-              const iframe = previewPane.querySelector('iframe');
-              if (iframe) {
-                try {
-                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                  if (iframeDoc) {
-                    this.injectPrismToDoc(iframeDoc);
-                  }
-                } catch (e) {
-                  console.log('无法访问 iframe 内容', e);
-                }
-              } else {
-                // 如果没有 iframe，直接高亮当前 DOM
-                this.highlightCodeInElement(previewPane);
-              }
-            } else {
-              // 尝试查找所有 iframe
-              const iframes = document.querySelectorAll('iframe');
-              iframes.forEach(iframe => {
-                try {
-                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                  if (iframeDoc) {
-                    this.injectPrismToDoc(iframeDoc);
-                  }
-                } catch (e) {
-                  // 忽略跨域错误
-                }
-              });
-            }
-          } catch (e) {
-            console.error('高亮代码时出错:', e);
+      const codeBlocks = doc.querySelectorAll('pre code');
+      if (codeBlocks.length) {
+        codeBlocks.forEach(block => {
+          // 确保有语言类
+          if (!block.className.includes('language-')) {
+            block.className = 'language-javascript ' + block.className;
           }
-        }, 500); // 缩短延迟时间
-      },
-      
-      // 向文档中注入 Prism
-      injectPrismToDoc(doc) {
+          
+          // 尝试高亮
+          if (window.Prism) {
+            Prism.highlightElement(block);
+          }
+        });
+      }
+    };
+    
+    // 向iframe注入样式和脚本
+    const injectPrismToIframe = (iframe) => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
         if (!doc) return;
         
-        // 检查是否已经注入
+        // 已经注入过，直接高亮
         if (doc.getElementById('prism-injected')) {
-          // 已注入，直接高亮
-          this.highlightCodeInElement(doc.body);
+          highlightCode(doc);
           return;
         }
         
-        // 标记为已注入
-        const marker = doc.createElement('div');
-        marker.id = 'prism-injected';
-        marker.style.display = 'none';
-        doc.body.appendChild(marker);
-        
         // 注入样式
         const style = doc.createElement('link');
+        style.id = 'prism-injected';
         style.rel = 'stylesheet';
         style.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
         doc.head.appendChild(style);
         
-        // 创建并注入 Prism 脚本
+        // 注入脚本
         const script = doc.createElement('script');
-        script.textContent = `
-          // Prism.js 内联实现
-          (function() {
-            if (window.Prism) return; // 已有 Prism
-            
-            window.Prism = {
-              manual: true,
-              languages: {},
-              highlightElement: function(element) {
-                if (!element) return;
-                
-                // 获取语言
-                var language = '';
-                var classes = element.className.split(/\\s+/);
-                for (var i = 0; i < classes.length; i++) {
-                  if (classes[i].startsWith('language-')) {
-                    language = classes[i].substring(9);
-                    break;
-                  }
-                }
-                
-                if (!language) {
-                  // 尝试从父元素获取语言
-                  if (element.parentElement && element.parentElement.tagName === 'PRE') {
-                    classes = element.parentElement.className.split(/\\s+/);
-                    for (var i = 0; i < classes.length; i++) {
-                      if (classes[i].startsWith('language-')) {
-                        language = classes[i].substring(9);
-                        break;
-                      }
-                    }
-                  }
-                }
-                
-                if (!language) {
-                  language = 'text'; // 默认语言
-                }
-                
-                // 简单的语法高亮
-                const text = element.textContent;
-                let html = text
-                  .replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;')
-                  .replace(/"/g, '&quot;')
-                  .replace(/'/g, '&#039;');
-                
-                // 关键字高亮 (简化版)
-                if (['javascript', 'js'].includes(language)) {
-                  html = html
-                    .replace(/\\b(function|return|if|else|for|while|var|let|const|class|import|export)\\b/g, '<span class="token keyword">$1</span>')
-                    .replace(/\\b(true|false|null|undefined)\\b/g, '<span class="token boolean">$1</span>')
-                    .replace(/("[^"]*"|'[^']*'|\`[^\`]*\`)/, '<span class="token string">$1</span>')
-                    .replace(/\\b(\\d+)\\b/g, '<span class="token number">$1</span>')
-                    .replace(/\\/\\/.*/g, '<span class="token comment">$&</span>')
-                    .replace(/\\/\\*[\\s\\S]*?\\*\\//g, '<span class="token comment">$&</span>');
-                } else if (['python', 'py'].includes(language)) {
-                  html = html
-                    .replace(/\\b(def|class|import|from|return|if|elif|else|for|while|with|as|try|except|finally)\\b/g, '<span class="token keyword">$1</span>')
-                    .replace(/\\b(True|False|None)\\b/g, '<span class="token boolean">$1</span>')
-                    .replace(/("[^"]*"|'[^']*'|\`[^\`]*\`)/, '<span class="token string">$1</span>')
-                    .replace(/\\b(\\d+)\\b/g, '<span class="token number">$1</span>')
-                    .replace(/#.*/g, '<span class="token comment">$&</span>');
-                } else if (['css'].includes(language)) {
-                  html = html
-                    .replace(/[{}]/g, '<span class="token punctuation">$&</span>')
-                    .replace(/(\\.[-\\w]+)/g, '<span class="token selector">$1</span>')
-                    .replace(/:[^;]+;/g, function(match) {
-                      return match.replace(/:/, '<span class="token punctuation">:</span>')
-                                   .replace(/;/, '<span class="token punctuation">;</span>');
-                    });
-                }
-                
-                element.innerHTML = html;
-              },
-              highlightAll: function() {
-                var elements = document.querySelectorAll('pre code, code[class*="language-"]');
-                console.log('找到 ' + elements.length + ' 个代码元素');
-                Array.prototype.forEach.call(elements, this.highlightElement);
-              }
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+        script.onload = () => {
+          // 加载完成后，立即加载语言支持
+          const languages = ['javascript', 'css', 'python', 'bash', 'yaml'];
+          languages.forEach(lang => {
+            const langScript = doc.createElement('script');
+            langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${lang}.min.js`;
+            langScript.onload = () => {
+              // 每个语言加载完成后，尝试高亮
+              highlightCode(doc);
             };
-            
-            // 立即高亮
-            setTimeout(function() {
-              window.Prism.highlightAll();
-            }, 100);
-          })();
-        `;
+            doc.body.appendChild(langScript);
+          });
+          
+          // 立即尝试高亮
+          highlightCode(doc);
+        };
         doc.body.appendChild(script);
-        
-        // 立即尝试高亮
-        this.highlightCodeInElement(doc.body);
+      } catch (e) {
+        // 忽略跨域错误
+      }
+    };
+    
+    // 观察预览窗格变化
+    const startObserver = () => {
+      // 创建一个MutationObserver来监视DOM变化
+      const observer = new MutationObserver((mutations) => {
+        // 查找所有iframe
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(injectPrismToIframe);
+      });
+      
+      // 监视整个文档的变化
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true 
+      });
+      
+      // 立即检查现有iframe
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(injectPrismToIframe);
+    };
+    
+    // 在CMS加载完成后启动
+    if (window.CMS) {
+      window.CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
+    }
+    
+    // 简化版预览组件
+    const PostPreview = createClass({
+      componentDidMount() {
+        // 尝试立即高亮
+        this.highlightCode();
       },
       
-      // 高亮指定元素中的代码
-      highlightCodeInElement(element) {
-        if (!element) return;
-        
-        // 查找所有代码块
-        const codeBlocks = element.querySelectorAll('pre code');
-        console.log(`找到 ${codeBlocks.length} 个代码块`);
-        
-        // 尝试高亮每个代码块
-        codeBlocks.forEach(code => {
-          if (!code.className.includes('language-')) {
-            // 尝试从父元素获取语言
-            if (code.parentElement && code.parentElement.className.includes('language-')) {
-              const langMatch = code.parentElement.className.match(/language-(\w+)/);
-              if (langMatch) {
-                code.className = `language-${langMatch[1]} ${code.className}`;
-              } else {
-                code.className = 'language-javascript ' + code.className;
-              }
-            } else {
-              // 默认为 JavaScript
-              code.className = 'language-javascript ' + code.className;
-            }
-          }
-          
-          try {
-            if (window.Prism) {
-              window.Prism.highlightElement(code);
-            }
-          } catch (e) {
-            console.error('高亮代码块时出错', e);
-          }
-        });
-        
-        // 独立的 code 元素
-        const inlineCodes = Array.from(element.querySelectorAll('code')).filter(
-          code => code.parentElement.tagName !== 'PRE'
-        );
-        
-        inlineCodes.forEach(code => {
-          if (!code.className.includes('language-')) {
-            code.className = 'language-text ' + code.className;
-          }
-          
-          try {
-            if (window.Prism) {
-              window.Prism.highlightElement(code);
-            }
-          } catch (e) {
-            console.error('高亮行内代码时出错', e);
-          }
-        });
+      componentDidUpdate() {
+        // 更新后立即高亮
+        this.highlightCode();
+      },
+      
+      highlightCode() {
+        // 检查所有iframe
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(injectPrismToIframe);
       },
       
       render: function() {
         const entry = this.props.entry;
         const title = entry.getIn(['data', 'title']) || '';
         
-        return h('div', { className: 'content' },
+        return h('div', {},
           h('h1', {}, title),
           h('div', {}, this.props.widgetFor('body'))
         );
       }
     });
     
-    // 注册预览模板
-    CMS.registerPreviewTemplate('posts', PostPreview);
-    CMS.registerPreviewTemplate('pages', PostPreview);
-    
-    // 注册代码块编辑器组件
-    CMS.registerEditorComponent({
-      id: "code",
-      label: "代码块",
-      fields: [
-        {
-          name: "language",
-          label: "语言",
-          widget: "select",
-          options: ["javascript", "css", "html", "python", "bash", "yaml", "json", "go", "text"],
-          default: "javascript"
+    // 注册预览组件
+    if (window.CMS) {
+      window.CMS.registerPreviewTemplate('posts', PostPreview);
+      window.CMS.registerPreviewTemplate('pages', PostPreview);
+      
+      // 注册代码块编辑器组件
+      window.CMS.registerEditorComponent({
+        id: "code",
+        label: "代码块",
+        fields: [
+          {
+            name: "language",
+            label: "语言",
+            widget: "select",
+            options: ["javascript", "css", "html", "python", "bash", "yaml"],
+            default: "javascript"
+          },
+          {
+            name: "code",
+            label: "代码",
+            widget: "text"
+          }
+        ],
+        pattern: /^```(\w+)\n([\s\S]*?)```$/,
+        fromBlock: function(match) {
+          return {
+            language: match[1],
+            code: match[2]
+          };
         },
-        {
-          name: "code",
-          label: "代码",
-          widget: "text"
+        toBlock: function(data) {
+          return "```" + data.language + "\n" + data.code + "\n```";
+        },
+        toPreview: function(data) {
+          // 确保HTML特殊字符被正确编码
+          const encodedCode = data.code
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+            
+          return (
+            '<pre class="language-' + data.language + '">' +
+              '<code class="language-' + data.language + '">' +
+                encodedCode +
+              '</code>' +
+            '</pre>'
+          );
         }
-      ],
-      pattern: /^```(\w+)\n([\s\S]*?)```$/,
-      fromBlock: function(match) {
-        return {
-          language: match[1],
-          code: match[2]
-        };
-      },
-      toBlock: function(data) {
-        return "```" + data.language + "\n" + data.code + "\n```";
-      },
-      toPreview: function(data) {
-        // 确保 HTML 特殊字符被正确编码
-        const encodedCode = data.code
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-          
-        return (
-          '<pre class="language-' + data.language + '">' +
-            '<code class="language-' + data.language + '">' +
-              encodedCode +
-            '</code>' +
-          '</pre>'
-        );
-      }
-    });
+      });
+    }
     
-    // 添加代码块快捷方式
-    CMS.registerShortcode({
-      id: "backticks",
-      label: "代码块快捷方式",
-      pattern: /^```(\w+)?$/m,
-      process: function(match, index) {
-        const lang = match.includes(' ') ? match.split(' ')[1] : 'javascript';
-        return {
-          output: match + "\n\n```",
-          newSelection: [index + match.length + 1, index + match.length + 1]
-        };
+    // CMS加载完成后启动观察器
+    document.addEventListener('DOMContentLoaded', () => {
+      // 如果CMS已加载，立即启动
+      if (window.CMS) {
+        startObserver();
+      } else {
+        // 否则等待CMS加载
+        const checkCMS = setInterval(() => {
+          if (window.CMS) {
+            clearInterval(checkCMS);
+            startObserver();
+          }
+        }, 100);
       }
     });
   </script>
