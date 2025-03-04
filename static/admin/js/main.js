@@ -161,9 +161,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 导出公共API - 确保这些函数已定义
+// 在main.js文件的CodeFormatter对象中添加新的格式化函数引用
 window.CodeFormatter = {
   formatCode: typeof formatCode === 'function' ? formatCode : function() { console.warn('formatCode未定义'); },
   formatMarkdownCodeBlocks: typeof formatMarkdownCodeBlocks === 'function' ? formatMarkdownCodeBlocks : function() { console.warn('formatMarkdownCodeBlocks未定义'); },
   highlightCode: typeof window.highlightCode === 'function' ? window.highlightCode : function() { console.warn('highlightCode未定义'); },
-  isMarkdownEditor: typeof isMarkdownEditor === 'function' ? isMarkdownEditor : function() { console.warn('isMarkdownEditor未定义'); }
+  isMarkdownEditor: typeof isMarkdownEditor === 'function' ? isMarkdownEditor : function() { console.warn('isMarkdownEditor未定义'); },
+  // 添加新的格式化函数引用
+  formatJavaScript: typeof formatJavaScript === 'function' ? formatJavaScript : function() { console.warn('formatJavaScript未定义'); },
+  formatCSS: typeof formatCSS === 'function' ? formatCSS : function() { console.warn('formatCSS未定义'); },
+  formatHTML: typeof formatHTML === 'function' ? formatHTML : function() { console.warn('formatHTML未定义'); },
+  formatC: typeof formatC === 'function' ? formatC : function() { console.warn('formatC未定义'); },
+  formatCSharp: typeof formatCSharp === 'function' ? formatCSharp : function() { console.warn('formatCSharp未定义'); },
+  formatPython: typeof formatPython === 'function' ? formatPython : function() { console.warn('formatPython未定义'); },
+  formatGeneric: typeof formatGeneric === 'function' ? formatGeneric : function() { console.warn('formatGeneric未定义'); },
+  formatCurrentCode: typeof formatCurrentCode === 'function' ? formatCurrentCode : function() { console.warn('formatCurrentCode未定义'); },
+  determineLanguage: typeof determineLanguage === 'function' ? determineLanguage : function() { console.warn('determineLanguage未定义'); }
 };
