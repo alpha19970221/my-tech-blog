@@ -15,12 +15,35 @@ const highlightCode = (doc) => {
         block.className = 'language-javascript ' + block.className;
       }
       
-      // 尝试高亮
+      // 尝试高亮，添加更多错误处理
       if (window.Prism) {
         try {
+          // 确保block有效
+          if (!block || typeof block !== 'object') {
+            console.warn('无效的代码块元素:', block);
+            return;
+          }
+          
+          // 确保Prism可用
+          if (typeof Prism.highlightElement !== 'function') {
+            console.warn('Prism.highlightElement不是一个函数');
+            return;
+          }
+          
+          // 应用高亮
           Prism.highlightElement(block);
         } catch (e) {
           console.error('Prism高亮失败:', e);
+          // 尝试基本的HTML转义作为备选
+          if (block && block.textContent) {
+            const escaped = block.textContent
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+            block.innerHTML = escaped;
+          }
         }
       } else {
         console.warn('Prism未加载，无法高亮代码块');
@@ -80,29 +103,20 @@ const injectPrismToIframe = (iframe) => {
     `;
     doc.head.appendChild(customStyle);
     
-    // 注入脚本
+    // 注入完整的Prism脚本
     const script = doc.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
     script.onload = () => {
-      console.log('Prism核心已加载');
+      console.log('Prism已加载到iframe');
       
-      // 加载Prism自动加载器
-      const autoloader = doc.createElement('script');
-      autoloader.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
-      autoloader.onload = () => {
-        console.log('Prism自动加载器已加载');
-        highlightCode(doc);
-      };
-      doc.body.appendChild(autoloader);
-      
-      // 加载语言支持
-      const languageScript = doc.createElement('script');
-      languageScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js';
-      languageScript.onload = () => {
-        console.log('JavaScript语法支持已加载');
-        highlightCode(doc);
-      };
-      doc.body.appendChild(languageScript);
+      // 触发高亮
+      setTimeout(() => {
+        try {
+          highlightCode(doc);
+        } catch (e) {
+          console.error('iframe中的高亮失败:', e);
+        }
+      }, 100);
     };
     doc.body.appendChild(script);
     
