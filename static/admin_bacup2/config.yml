@@ -1,0 +1,88 @@
+backend:
+  name: github
+  repo: Alpha19970221/my-tech-blog
+  branch: main # 部署的分支
+  base_url: https://api.netlify.com # Netlify 的OAuth API
+  auth_endpoint: auth # Netlify 的OAuth端点
+
+# 如果您使用 Netlify Identity
+# backend:
+#   name: git-gateway
+
+# 设置媒体和公共文件夹
+media_folder: "static/images"
+public_folder: "/images"
+
+# 预览设置
+local_backend: true # 开发环境测试用
+publish_mode: editorial_workflow # 可选，添加发布工作流
+
+# 内容管理配置
+collections:
+  - name: "posts"
+    label: "博客文章"
+    folder: "content/posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - {label: "标题", name: "title", widget: "string"}
+      - {label: "发布日期", name: "date", widget: "datetime"}
+      - {label: "描述", name: "description", widget: "text"}
+      - {label: "特色图片", name: "featured_image", widget: "image", required: false}
+      - {label: "标签", name: "tags", widget: "list", required: false}
+      - {label: "分类", name: "categories", widget: "list", required: false}
+      - {
+          label: "内容", 
+          name: "body", 
+          widget: "code", 
+          default_language: "markdown",
+          output_code_only: true,
+          allow_language_selection: false
+        }
+
+  - name: "pages"
+    label: "页面"
+    folder: "content"
+    create: true
+    fields:
+      - {label: "标题", name: "title", widget: "string"}
+      - {label: "发布日期", name: "date", widget: "datetime"}
+      - {
+          label: "内容", 
+          name: "body", 
+          widget: "code", 
+          default_language: "markdown",
+          output_code_only: true,
+          allow_language_selection: false
+        }
+
+  - name: "code-snippets"
+    label: "代码片段"
+    folder: "content/snippets"
+    create: true
+    fields:
+      - {label: "标题", name: "title", widget: "string"}
+      - {label: "描述", name: "description", widget: "text"}
+      - {
+          label: "JavaScript", 
+          name: "javascript", 
+          widget: "code", 
+          default_language: "javascript",
+          output_code_only: true
+        }
+      - {
+          label: "HTML", 
+          name: "html", 
+          widget: "code", 
+          default_language: "html",
+          output_code_only: true,
+          required: false
+        }
+      - {
+          label: "CSS", 
+          name: "css", 
+          widget: "code", 
+          default_language: "css",
+          output_code_only: true,
+          required: false
+        }
