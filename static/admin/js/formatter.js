@@ -631,6 +631,12 @@ const formatCode = (code, language) => {
       return code;
     }
     
+    // 确保Prettier 3.x的插件已注册
+    ensurePluginsRegistered();
+    
+    // 处理语言别名，统一化
+    const normalizedLanguage = normalizeLanguage(language);
+    
     // 对于非常简短的代码，保持原样
     if (code.trim().length < 5) {
       console.log('代码过短，无需格式化');
@@ -647,31 +653,23 @@ const formatCode = (code, language) => {
         console.warn('检测到不完整的Python代码，保持原样');
         return code;
       }
+      
+      if (window.pythonFormatter && window.pythonFormatter.format) {
+        return window.pythonFormatter.format(code);
+      } else {
+        console.warn('Python格式化器未加载，尝试加载...');
+        loadPythonFormatter();
+        return code; // 返回原始代码，下次格式化时将可用
+      }
     }
     
-    // 确保Prettier 3.x的插件已注册
-    ensurePluginsRegistered();
-    
-    // 处理语言别名，统一化
-    const normalizedLanguage = normalizeLanguage(language);
-    
-    // 处理C, C++, C#和Python等非Prettier原生支持的语言
+    // 处理C, C++, C#等非Prettier原生支持的语言
     if (['c', 'cpp', 'clike', 'csharp', 'cs'].includes(normalizedLanguage)) {
       if (window.cppFormatter && window.cppFormatter.format) {
         return window.cppFormatter.format(code);
       } else {
         console.warn('C/C++/C#格式化器未加载，尝试加载...');
         loadCppFormatter();
-        return code; // 返回原始代码，下次格式化时将可用
-      }
-    }
-    
-    if (['python', 'py'].includes(normalizedLanguage)) {
-      if (window.pythonFormatter && window.pythonFormatter.format) {
-        return window.pythonFormatter.format(code);
-      } else {
-        console.warn('Python格式化器未加载，尝试加载...');
-        loadPythonFormatter();
         return code; // 返回原始代码，下次格式化时将可用
       }
     }
@@ -881,7 +879,6 @@ const formatMarkdownCodeBlocks = (markdown) => {
 };
 
 // 格式化当前编辑器内容
-// 格式化当前编辑器内容
 const formatCurrentCode = (textarea, language = 'javascript') => {
   if (!textarea) return;
   
@@ -937,8 +934,8 @@ const formatCurrentCode = (textarea, language = 'javascript') => {
       }
       
       const newValue = textarea.value.substring(0, selection.start) + 
-                       formattedText + 
-                       textarea.value.substring(selection.end);
+                     formattedText + 
+                     textarea.value.substring(selection.end);
       textarea.value = newValue;
     } else {
       // 格式化整个内容
