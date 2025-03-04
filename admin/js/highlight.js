@@ -70,7 +70,7 @@ const injectPrismToIframe = (iframe) => {
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
     script.onload = () => {
       // 加载完成后，立即加载语言支持
-      const languages = ['javascript', 'css', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx'];
+      const languages = ['javascript', 'css', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx', 'cpp', 'c', 'csharp'];
       languages.forEach(lang => {
         const langScript = doc.createElement('script');
         langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${lang}.min.js`;
