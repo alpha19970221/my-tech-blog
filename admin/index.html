@@ -3,10 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Content Manager</title>
+  <title>内容管理</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <!-- 引入构建后的JS文件 -->
-  <script src="dist/index.js"></script>
+  <!-- 直接使用 CDN 版本，不需要 webpack 构建 -->
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  
+  <!-- 如果你需要预览模板，可以单独添加 -->
+  <script>
+    // 你可以在这里添加自定义预览模板
+    // 例如：
+    // var PostPreview = createClass({
+    //   render: function() {
+    //     var entry = this.props.entry;
+    //     return h('div', {},
+    //       h('h1', {}, entry.getIn(['data', 'title'])),
+    //       h('div', {"className": "text"}, this.props.widgetFor('body'))
+    //     );
+    //   }
+    // });
+    // CMS.registerPreviewTemplate('posts', PostPreview);
+  </script>
 </body>
 </html>
