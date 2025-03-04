@@ -35,7 +35,111 @@ code[class*="language-"] {
   background: #3a7edf;
 }
 
-/* 高亮活动行 */
+/* Markdown 格式化按钮 */
+.markdown-format-tools {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.markdown-format-button {
+  padding: 5px 10px;
+  background: #4a8fee;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.markdown-format-button:hover {
+  background: #3a7edf;
+}
+
+/* 语言选择器 */
+.language-selector {
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.language-selector div {
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.language-selector div:hover {
+  background: #f0f0f0;
+}
+
+/* 高亮代码块中的当前行 */
+pre[class*="language-"] .line-highlight {
+  background: rgba(255, 255, 255, 0.1);
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+/* 活动行高亮 */
 .active-line {
   background-color: rgba(255, 255, 128, 0.1);
+}
+
+/* 代码块边框和阴影 */
+.language-selector {
+  z-index: 9999;
+}
+
+/* 改进后的格式化按钮容器 */
+.code-format-controls {
+  margin: 8px 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 键盘快捷键提示 */
+.shortcut-hint {
+  color: #666;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* 帮助工具提示 */
+.help-tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+  cursor: pointer;
+  color: #4a8fee;
+}
+
+.help-tooltip .tooltip-text {
+  visibility: hidden;
+  width: 240px;
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 1;
+  top: 125%;
+  left: 50%;
+  margin-left: -120px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.help-tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
 }

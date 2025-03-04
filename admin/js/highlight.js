@@ -89,3 +89,24 @@ const injectPrismToIframe = (iframe) => {
     // 忽略跨域错误
   }
 };
+
+// 高亮Markdown预览中的代码块
+const highlightMarkdownPreview = (previewContainer) => {
+  if (!previewContainer) return;
+  
+  // 找到预览容器中的代码块
+  const codeBlocks = previewContainer.querySelectorAll('pre code');
+  if (!codeBlocks.length) return;
+  
+  codeBlocks.forEach(block => {
+    // 如果没有语言类，添加默认语言
+    if (!block.className.includes('language-')) {
+      block.className = 'language-javascript ' + block.className;
+    }
+    
+    // 尝试高亮
+    if (window.Prism) {
+      Prism.highlightElement(block);
+    }
+  });
+};
