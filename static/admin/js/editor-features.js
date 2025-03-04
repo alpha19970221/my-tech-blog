@@ -72,7 +72,7 @@ const enhanceTextarea = (textarea) => {
             prevLine.trim().endsWith(':') ||
             prevLine.trim().endsWith('(') ||
             prevLine.trim().endsWith('[')) {
-          indent += '  '; // 增加两个空格的缩进
+          indent += '    '; // 增加四个空格的缩进
         }
         
         // Markdown列表自动继续
@@ -178,18 +178,18 @@ const enhanceTextarea = (textarea) => {
       } else {
         // 单光标缩进
         if (!e.shiftKey) {
-          // 增加缩进 (两个空格)
-          textarea.value = value.substring(0, start) + '  ' + value.substring(end);
+          // 增加缩进 (四个空格)
+          textarea.value = value.substring(0, start) + '    ' + value.substring(end);
           textarea.selectionStart = textarea.selectionEnd = start + 2;
         } else {
           // 减少缩进
           const lineStart = value.lastIndexOf('\n', start - 1) + 1;
           const linePrefix = value.substring(lineStart, start);
           
-          if (linePrefix.startsWith('  ')) {
-            // 移除两个空格
-            textarea.value = value.substring(0, lineStart) + linePrefix.substring(2) + value.substring(start);
-            textarea.selectionStart = textarea.selectionEnd = start - 2 > lineStart ? start - 2 : lineStart;
+          if (linePrefix.startsWith('    ')) {
+            // 移除四个空格
+            textarea.value = value.substring(0, lineStart) + linePrefix.substring(4) + value.substring(start);
+            textarea.selectionStart = textarea.selectionEnd = start - 4 > lineStart ? start - 4 : lineStart;
           } else if (linePrefix.startsWith(' ')) {
             // 移除一个空格
             textarea.value = value.substring(0, lineStart) + linePrefix.substring(1) + value.substring(start);
