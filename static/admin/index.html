@@ -5,13 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>内容管理</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  
+  <!-- 添加 Prism.js CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  
+  <!-- 自定义样式 -->
+  <style>
+    /* 确保代码块样式清晰可见 */
+    pre[class*="language-"] {
+      background: #2d2d2d;
+      color: #ccc;
+      padding: 1em;
+      margin: 1em 0;
+      border-radius: 5px;
+      overflow: auto;
+    }
+
+    code[class*="language-"] {
+      font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+      text-align: left;
+      white-space: pre;
+      word-spacing: normal;
+      word-break: normal;
+      word-wrap: normal;
+      line-height: 1.5;
+      tab-size: 4;
+    }
+  </style>
 </head>
 <body>
   <!-- Decap CMS -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
   
+  <!-- Prism.js 和语言支持 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  
   <script>
-    // 自定义预览模板
+    // 简单的代码块预览组件
     const PostPreview = createClass({
       render: function() {
         const entry = this.props.entry;
@@ -19,199 +54,7 @@
         
         return h('div', { className: 'content' },
           h('h1', {}, title),
-          h('div', {
-            dangerouslySetInnerHTML: {
-              __html: `
-                <div id="preview-content">
-                  ${this.props.widgetFor('body')}
-                </div>
-                
-                <!-- 内联 Prism.js CSS -->
-                <style>
-                  /* Prism Tomorrow Night Theme */
-                  code[class*="language-"], pre[class*="language-"] {
-                    color: #ccc;
-                    background: none;
-                    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-                    font-size: 1em;
-                    text-align: left;
-                    white-space: pre;
-                    word-spacing: normal;
-                    word-break: normal;
-                    word-wrap: normal;
-                    line-height: 1.5;
-                    tab-size: 4;
-                    hyphens: none;
-                  }
-                  
-                  pre[class*="language-"] {
-                    padding: 1em;
-                    margin: .5em 0;
-                    overflow: auto;
-                    border-radius: 0.3em;
-                    background: #2d2d2d;
-                  }
-                  
-                  :not(pre) > code[class*="language-"] {
-                    padding: .1em;
-                    border-radius: .3em;
-                    white-space: normal;
-                    background: #2d2d2d;
-                  }
-                  
-                  .token.comment, .token.block-comment, .token.prolog, .token.doctype, .token.cdata {
-                    color: #999;
-                  }
-                  
-                  .token.punctuation {
-                    color: #ccc;
-                  }
-                  
-                  .token.tag, .token.attr-name, .token.namespace, .token.deleted {
-                    color: #e2777a;
-                  }
-                  
-                  .token.function-name {
-                    color: #6196cc;
-                  }
-                  
-                  .token.boolean, .token.number, .token.function {
-                    color: #f08d49;
-                  }
-                  
-                  .token.property, .token.class-name, .token.constant, .token.symbol {
-                    color: #f8c555;
-                  }
-                  
-                  .token.selector, .token.important, .token.atrule, .token.keyword, .token.builtin {
-                    color: #cc99cd;
-                  }
-                  
-                  .token.string, .token.char, .token.attr-value, .token.regex, .token.variable {
-                    color: #7ec699;
-                  }
-                  
-                  .token.operator, .token.entity, .token.url {
-                    color: #67cdcc;
-                  }
-                  
-                  .token.important, .token.bold {
-                    font-weight: bold;
-                  }
-                  
-                  .token.italic {
-                    font-style: italic;
-                  }
-                  
-                  .token.entity {
-                    cursor: help;
-                  }
-                  
-                  .token.inserted {
-                    color: green;
-                  }
-                </style>
-                
-                <!-- 内联 Prism.js -->
-                <script>
-                /* Prism.js 核心代码 (简化版) */
-                (function(){
-                  var self = window.Prism = {
-                    languages: {}
-                  };
-                  
-                  var lang = /\\b(?:javascript|python|css|html|bash|go|java|yaml|json|markdown)\\b/i;
-                  
-                  // 核心高亮函数
-                  self.highlight = function(text, grammar, language) {
-                    return text
-                      .replace(/\\/\\*[\\s\\S]*?\\*\\//g, match => '<span class="token comment">' + match + '</span>')
-                      .replace(/\\/\\/.+/g, match => '<span class="token comment">' + match + '</span>')
-                      .replace(/"(?:\\\\.|[^"\\\\])*"/g, match => '<span class="token string">' + match + '</span>')
-                      .replace(/'(?:\\\\.|[^'\\\\])*'/g, match => '<span class="token string">' + match + '</span>')
-                      .replace(/\\b(?:function|return|if|else|for|while|class|var|let|const)\\b/g, match => '<span class="token keyword">' + match + '</span>')
-                      .replace(/\\b(?:true|false|null|undefined)\\b/g, match => '<span class="token boolean">' + match + '</span>')
-                      .replace(/\\b\\d+(?:\\.\\d+)?\\b/g, match => '<span class="token number">' + match + '</span>')
-                      .replace(/[()[\\]{}]/g, match => '<span class="token punctuation">' + match + '</span>');
-                  };
-                  
-                  // 尝试获取语言
-                  function getLanguage(element) {
-                    var classes = element.className.split(/\\s+/);
-                    for (var i = 0; i < classes.length; i++) {
-                      if (lang.test(classes[i])) {
-                        return classes[i].replace('language-', '');
-                      }
-                    }
-                    return 'javascript'; // 默认
-                  }
-                  
-                  // 高亮页面上的所有代码块
-                  function highlightAll() {
-                    console.log('尝试高亮所有代码块...');
-                    var pres = document.querySelectorAll('pre');
-                    console.log('找到 ' + pres.length + ' 个 pre 元素');
-                    
-                    pres.forEach(function(pre) {
-                      // 查找或创建 code 元素
-                      var code = pre.querySelector('code') || pre;
-                      var language = getLanguage(code) || getLanguage(pre);
-                      
-                      // 确保代码块有语言类
-                      if (!pre.className.includes('language-')) {
-                        pre.className = 'language-' + language + ' ' + pre.className;
-                      }
-                      if (code !== pre && !code.className.includes('language-')) {
-                        code.className = 'language-' + language + ' ' + code.className;
-                      }
-                      
-                      // 高亮代码
-                      if (code.textContent.trim()) {
-                        var originalContent = code.textContent;
-                        try {
-                          code.innerHTML = self.highlight(originalContent, null, language);
-                          console.log('已高亮代码块:', language);
-                        } catch(e) {
-                          console.error('高亮代码时出错:', e);
-                          code.textContent = originalContent; // 还原原始内容
-                        }
-                      }
-                    });
-                    
-                    // 高亮行内代码
-                    var inlineCodes = document.querySelectorAll('code:not(pre code)');
-                    console.log('找到 ' + inlineCodes.length + ' 个行内代码元素');
-                    
-                    inlineCodes.forEach(function(code) {
-                      var language = getLanguage(code) || 'text';
-                      if (!code.className.includes('language-')) {
-                        code.className = 'language-' + language + ' ' + code.className;
-                      }
-                      
-                      if (code.textContent.trim()) {
-                        var originalContent = code.textContent;
-                        try {
-                          code.innerHTML = self.highlight(originalContent, null, language);
-                        } catch(e) {
-                          code.textContent = originalContent; // 还原原始内容
-                        }
-                      }
-                    });
-                  }
-                  
-                  // 等待一段时间后高亮
-                  setTimeout(highlightAll, 300);
-                  
-                  // 定期检查新的代码块
-                  setInterval(highlightAll, 3000);
-                  
-                  // 导出全局函数以便手动调用
-                  window.highlightAllCode = highlightAll;
-                })();
-                </script>
-              `
-            }
-          })
+          h('div', {}, this.props.widgetFor('body'))
         );
       }
     });
@@ -229,7 +72,7 @@
           name: "language",
           label: "语言",
           widget: "select",
-          options: ["javascript", "css", "html", "python", "bash", "go", "java", "yaml", "json", "markdown"],
+          options: ["javascript", "css", "html", "python", "bash", "yaml", "json"],
           default: "javascript"
         },
         {
@@ -266,17 +109,69 @@
         );
       }
     });
-    
-    // 在代码编辑器中添加```作为快捷方式
-    CMS.registerShortcode({
-      id: "code-shortcut",
-      pattern: /^```(\w+)/m,
-      process: function(match, index) {
-        // 如果找到```开头的代码块，添加结束标记
-        return {
-          output: match + "\n\n```",
-          newIndex: index + match.length + 2
-        };
+  </script>
+
+  <!-- 用于在预览中启用代码高亮的脚本 -->
+  <script>
+    // 等待 CMS 加载完毕
+    document.addEventListener('DOMContentLoaded', function() {
+      // 确保 Prism.js 已加载
+      if (typeof Prism !== 'undefined') {
+        console.log('Prism.js 已加载');
+        
+        // 尝试向预览 iframe 中注入 Prism.js
+        setInterval(function() {
+          try {
+            // 查找所有 iframe
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(function(iframe) {
+              try {
+                // 尝试访问 iframe 内容
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // 如果成功访问，检查是否已注入脚本
+                if (iframeDoc && !iframeDoc.getElementById('prism-injected')) {
+                  // 创建样式元素
+                  const style = iframeDoc.createElement('link');
+                  style.id = 'prism-injected';
+                  style.rel = 'stylesheet';
+                  style.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
+                  iframeDoc.head.appendChild(style);
+                  
+                  // 创建脚本元素
+                  const script = iframeDoc.createElement('script');
+                  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+                  script.onload = function() {
+                    // 加载语言支持
+                    const languages = ['javascript', 'css', 'python', 'bash', 'yaml'];
+                    languages.forEach(function(lang) {
+                      const langScript = iframeDoc.createElement('script');
+                      langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${lang}.min.js`;
+                      iframeDoc.body.appendChild(langScript);
+                    });
+                    
+                    // 手动触发高亮
+                    setTimeout(function() {
+                      if (typeof iframeDoc.defaultView.Prism !== 'undefined') {
+                        iframeDoc.defaultView.Prism.highlightAll();
+                      }
+                    }, 1000);
+                  };
+                  iframeDoc.body.appendChild(script);
+                  
+                  console.log('已向 iframe 注入 Prism.js');
+                } else if (iframeDoc && typeof iframeDoc.defaultView.Prism !== 'undefined') {
+                  // 如果已注入 Prism，尝试高亮代码
+                  iframeDoc.defaultView.Prism.highlightAll();
+                }
+              } catch (e) {
+                // 跨域问题或其他错误，忽略这个 iframe
+              }
+            });
+          } catch (e) {
+            console.error('注入 Prism.js 时出错:', e);
+          }
+        }, 3000);
       }
     });
   </script>
