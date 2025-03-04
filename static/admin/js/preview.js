@@ -6,20 +6,50 @@
 const PostPreview = createClass({
   componentDidMount() {
     // 尝试立即高亮
-    this.highlightCode();
+    this.applyHighlighting();
   },
   
   componentDidUpdate() {
     // 更新后立即高亮
-    this.highlightCode();
+    this.applyHighlighting();
   },
   
-  highlightCode() {
-    // 检查所有iframe
-    const iframes = document.querySelectorAll('iframe');
-    if (typeof window.injectPrismToIframe === 'function') {
-      iframes.forEach(window.injectPrismToIframe);
+  applyHighlighting() {
+    // 确保Prism已加载
+    if (!window.Prism && window.loadPrismToDocument) {
+      console.log('加载Prism到主文档');
+      window.loadPrismToDocument().then(() => {
+        this.highlightPreviewCode();
+      });
+    } else {
+      this.highlightPreviewCode();
     }
+  },
+  
+  highlightPreviewCode() {
+    console.log('尝试高亮预览中的代码块');
+    
+    // 首先尝试高亮当前文档中的代码块
+    if (typeof window.highlightCode === 'function') {
+      window.highlightCode(document);
+    }
+    
+    // 查找iframe并处理
+    setTimeout(() => {
+      const iframes = document.querySelectorAll('iframe');
+      if (iframes.length > 0) {
+        console.log(`找到 ${iframes.length} 个iframe`);
+        
+        // 使用全局函数注入Prism
+        if (typeof window.injectPrismToIframe === 'function') {
+          iframes.forEach(window.injectPrismToIframe);
+        } else {
+          console.error('injectPrismToIframe 函数未定义');
+        }
+      } else {
+        console.log('未找到iframe');
+      }
+    }, 500);
   },
   
   render: function() {
@@ -71,17 +101,8 @@ const registerCodeBlockComponent = () => {
         return "```" + (data?.language || 'text') + "\n\n```";
       }
       
-      // 尝试格式化代码
-      let formattedCode = data.code;
-      
-      // 暂时禁用格式化，直接使用原代码
-      // try {
-      //   formattedCode = formatCode(data.code, data.language);
-      // } catch (e) {
-      //   console.error('格式化失败:', e);
-      // }
-      
-      return "```" + (data.language || 'text') + "\n" + formattedCode + "\n```";
+      // 使用原始代码，不尝试格式化
+      return "```" + (data.language || 'text') + "\n" + data.code + "\n```";
     },
     toPreview: function(data) {
       // 检查代码是否存在
@@ -107,13 +128,18 @@ const registerCodeBlockComponent = () => {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
-        
+      
+      // 确保语言标识符是有效的
+      const language = data.language || 'text';
+      
+      // 添加日志
+      console.log(`预览代码块: 语言=${language}, 长度=${codeString.length}`);
+      
+      // 使用完整的CSS类名确保Prism能正确识别
       return (
-        '<pre class="language-' + (data.language || 'text') + '">' +
-          '<code class="language-' + (data.language || 'text') + '">' +
-            encodedCode +
-          '</code>' +
-        '</pre>'
+        '<pre class="language-' + language + '"><code class="language-' + language + '">' +
+          encodedCode +
+        '</code></pre>'
       );
     }
   });

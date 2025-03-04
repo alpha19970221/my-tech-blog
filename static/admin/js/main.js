@@ -8,14 +8,20 @@ const startObserver = () => {
   const observer = new MutationObserver((mutations) => {
     // 查找所有iframe
     const iframes = document.querySelectorAll('iframe');
-    iframes.forEach(window.injectPrismToIframe);
+    if (typeof window.injectPrismToIframe === 'function') {
+      iframes.forEach(window.injectPrismToIframe);
+    }
     
     // 查找并增强所有代码编辑框
-    findAndEnhanceEditors();
+    if (typeof findAndEnhanceEditors === 'function') {
+      findAndEnhanceEditors();
+    }
     
     // 特别查找Markdown编辑器
-    const mdEditors = document.querySelectorAll('textarea[class*="markdown"], textarea[class*="Markdown"], textarea[class*="md-editor"]');
-    mdEditors.forEach(enhanceTextarea);
+    if (typeof enhanceTextarea === 'function') {
+      const mdEditors = document.querySelectorAll('textarea[class*="markdown"], textarea[class*="Markdown"], textarea[class*="md-editor"]');
+      mdEditors.forEach(enhanceTextarea);
+    }
   });
   
   // 监视整个文档的变化
@@ -26,10 +32,14 @@ const startObserver = () => {
   
   // 立即检查现有iframe
   const iframes = document.querySelectorAll('iframe');
-  iframes.forEach(window.injectPrismToIframe);
+  if (typeof window.injectPrismToIframe === 'function') {
+    iframes.forEach(window.injectPrismToIframe);
+  }
   
   // 立即增强所有编辑器
-  findAndEnhanceEditors();
+  if (typeof findAndEnhanceEditors === 'function') {
+    findAndEnhanceEditors();
+  }
 };
 
 // 添加CSS动态样式
@@ -70,6 +80,18 @@ const addDynamicStyles = () => {
 
 // 初始化所有CMS相关功能
 const initCMS = () => {
+  // 确保先加载Prism
+  if (typeof window.loadPrismToDocument === 'function') {
+    window.loadPrismToDocument().then(() => {
+      registerCMSComponents();
+    });
+  } else {
+    registerCMSComponents();
+  }
+};
+
+// 注册CMS组件
+const registerCMSComponents = () => {
   // 确保PostPreview已定义
   if (!window.PostPreview) {
     console.error('PostPreview组件未定义，请确保preview.js已正确加载');
@@ -79,6 +101,23 @@ const initCMS = () => {
   // 注册预览样式
   window.CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
   window.CMS.registerPreviewStyle('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+  
+  // 注册自定义样式
+  const customStyles = `
+    pre[class*="language-"] {
+      border-radius: 6px;
+      padding: 1em;
+      margin: 1em 0;
+      overflow: auto;
+      background: #2d2d2d;
+    }
+    
+    code[class*="language-"] {
+      font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
+      tab-size: 2;
+    }
+  `;
+  window.CMS.registerPreviewStyle(customStyles, { raw: true });
   
   // 注册预览组件
   window.CMS.registerPreviewTemplate('posts', window.PostPreview);
@@ -105,57 +144,6 @@ const initCMS = () => {
   console.info('使用 Ctrl+Shift+F 格式化代码');
 };
 
-// 确保injectPrismToIframe函数存在
-if (typeof window.injectPrismToIframe !== 'function') {
-  window.injectPrismToIframe = function(iframe) {
-    try {
-      const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-      
-      // 如果iframe中没有Prism，注入它
-      if (typeof iframeDocument.defaultView.Prism === 'undefined') {
-        // 注入Prism CSS
-        const prismCss = document.createElement('link');
-        prismCss.rel = 'stylesheet';
-        prismCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css';
-        iframeDocument.head.appendChild(prismCss);
-        
-        // 注入Prism JS
-        const prismJs = document.createElement('script');
-        prismJs.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
-        prismJs.onload = () => {
-          console.log('Prism已注入到iframe中');
-          // 高亮iframe中的代码
-          const codeBlocks = iframeDocument.querySelectorAll('pre code');
-          if (codeBlocks.length > 0) {
-            codeBlocks.forEach(block => {
-              try {
-                iframeDocument.defaultView.Prism.highlightElement(block);
-              } catch (e) {
-                console.error('高亮iframe中的代码块失败:', e);
-              }
-            });
-          }
-        };
-        iframeDocument.body.appendChild(prismJs);
-      } else {
-        // 直接高亮
-        const codeBlocks = iframeDocument.querySelectorAll('pre code');
-        if (codeBlocks.length > 0) {
-          codeBlocks.forEach(block => {
-            try {
-              iframeDocument.defaultView.Prism.highlightElement(block);
-            } catch (e) {
-              console.error('高亮iframe中的代码块失败:', e);
-            }
-          });
-        }
-      }
-    } catch (e) {
-      console.error('注入Prism到iframe失败:', e);
-    }
-  };
-}
-
 // 在页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
   // 如果CMS已加载，立即初始化
@@ -176,6 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.CodeFormatter = {
   formatCode: typeof formatCode === 'function' ? formatCode : function() { console.warn('formatCode未定义'); },
   formatMarkdownCodeBlocks: typeof formatMarkdownCodeBlocks === 'function' ? formatMarkdownCodeBlocks : function() { console.warn('formatMarkdownCodeBlocks未定义'); },
-  highlightCode: typeof highlightCode === 'function' ? highlightCode : function() { console.warn('highlightCode未定义'); },
+  highlightCode: typeof window.highlightCode === 'function' ? window.highlightCode : function() { console.warn('highlightCode未定义'); },
   isMarkdownEditor: typeof isMarkdownEditor === 'function' ? isMarkdownEditor : function() { console.warn('isMarkdownEditor未定义'); }
 };
