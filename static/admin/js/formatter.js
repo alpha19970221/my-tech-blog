@@ -2,10 +2,55 @@
  * 代码格式化功能
  */
 
+// 确保已加载所有需要的Prettier解析器插件
+document.addEventListener('DOMContentLoaded', () => {
+  // 检查是否已加载解析器
+  if (typeof prettier !== 'undefined' && !prettier.parsers.html) {
+    // 加载缺少的解析器
+    loadPrettierPlugins();
+  }
+});
+
+// 加载Prettier插件
+const loadPrettierPlugins = () => {
+  const plugins = [
+    'https://unpkg.com/prettier@2.8.8/parser-babel.js',
+    'https://unpkg.com/prettier@2.8.8/parser-html.js',
+    'https://unpkg.com/prettier@2.8.8/parser-typescript.js',
+    'https://unpkg.com/prettier@2.8.8/parser-markdown.js',
+    'https://unpkg.com/prettier@2.8.8/parser-postcss.js', // 用于CSS
+    'https://unpkg.com/prettier@2.8.8/parser-yaml.js',
+    'https://unpkg.com/prettier@2.8.8/parser-json.js'
+  ];
+  
+  let loadedCount = 0;
+  
+  plugins.forEach(url => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => {
+      loadedCount++;
+      if (loadedCount === plugins.length) {
+        console.log('所有Prettier解析器已加载完成');
+      }
+    };
+    script.onerror = (e) => {
+      console.error('加载Prettier解析器失败:', url, e);
+    };
+    document.head.appendChild(script);
+  });
+};
+
 // 代码格式化函数
 const formatCode = (code, language) => {
   try {
-    // 确定 Prettier 解析器
+    // 确保Prettier已加载
+    if (typeof prettier === 'undefined') {
+      console.error('Prettier库未加载');
+      return code;
+    }
+    
+    // 确定Prettier解析器
     let parser;
     switch (language) {
       case 'javascript':
@@ -41,6 +86,13 @@ const formatCode = (code, language) => {
         // 对于不支持的语言，返回原始代码
         return code;
     }
+    
+    // 检查解析器是否可用
+    if (!prettier.parsers[parser]) {
+      console.warn(`Prettier解析器 "${parser}" 不可用，正在尝试加载...`);
+      loadPrettierPlugins();
+      return code; // 临时返回原始代码
+    }
 
     // 格式化代码
     const formatted = prettier.format(code, {
@@ -64,11 +116,11 @@ const formatCode = (code, language) => {
   }
 };
 
-// 格式化 Markdown 中的代码块
+// 格式化Markdown中的代码块
 const formatMarkdownCodeBlocks = (markdown) => {
   if (!markdown) return markdown;
   
-  // 正则表达式匹配 Markdown 代码块: ```language\n code \n```
+  // 正则表达式匹配Markdown代码块: ```language\n code \n```
   const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
   
   return markdown.replace(codeBlockRegex, (match, language, code) => {
