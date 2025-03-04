@@ -1,0 +1,41 @@
+/* 编辑器样式优化 */
+.code-editor {
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
+  line-height: 1.5;
+}
+
+/* Prism 代码块样式增强 */
+pre[class*="language-"] {
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+  overflow: auto;
+  background: #2d2d2d;
+}
+
+code[class*="language-"] {
+  font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
+  tab-size: 2;
+}
+
+/* 自定义按钮样式 */
+.format-button {
+  padding: 5px 10px;
+  background: #4a8fee;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 5px 0;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.format-button:hover {
+  background: #3a7edf;
+}
+
+/* 高亮活动行 */
+.active-line {
+  background-color: rgba(255, 255, 128, 0.1);
+}

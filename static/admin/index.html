@@ -6,203 +6,37 @@
   <title>内容管理</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- Decap CMS -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  
+  <!-- Prism.js 和语言支持 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
   
-  <script>
-    // 简单的即时高亮处理器
-    const highlightCode = (doc) => {
-      if (!doc) return;
-      
-      const codeBlocks = doc.querySelectorAll('pre code');
-      if (codeBlocks.length) {
-        codeBlocks.forEach(block => {
-          // 确保有语言类
-          if (!block.className.includes('language-')) {
-            block.className = 'language-javascript ' + block.className;
-          }
-          
-          // 尝试高亮
-          if (window.Prism) {
-            Prism.highlightElement(block);
-          }
-        });
-      }
-    };
-    
-    // 向iframe注入样式和脚本
-    const injectPrismToIframe = (iframe) => {
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        if (!doc) return;
-        
-        // 已经注入过，直接高亮
-        if (doc.getElementById('prism-injected')) {
-          highlightCode(doc);
-          return;
-        }
-        
-        // 注入样式
-        const style = doc.createElement('link');
-        style.id = 'prism-injected';
-        style.rel = 'stylesheet';
-        style.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
-        doc.head.appendChild(style);
-        
-        // 注入脚本
-        const script = doc.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
-        script.onload = () => {
-          // 加载完成后，立即加载语言支持
-          const languages = ['javascript', 'css', 'python', 'bash', 'yaml'];
-          languages.forEach(lang => {
-            const langScript = doc.createElement('script');
-            langScript.src = `https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-${lang}.min.js`;
-            langScript.onload = () => {
-              // 每个语言加载完成后，尝试高亮
-              highlightCode(doc);
-            };
-            doc.body.appendChild(langScript);
-          });
-          
-          // 立即尝试高亮
-          highlightCode(doc);
-        };
-        doc.body.appendChild(script);
-      } catch (e) {
-        // 忽略跨域错误
-      }
-    };
-    
-    // 观察预览窗格变化
-    const startObserver = () => {
-      // 创建一个MutationObserver来监视DOM变化
-      const observer = new MutationObserver((mutations) => {
-        // 查找所有iframe
-        const iframes = document.querySelectorAll('iframe');
-        iframes.forEach(injectPrismToIframe);
-      });
-      
-      // 监视整个文档的变化
-      observer.observe(document.body, { 
-        childList: true, 
-        subtree: true 
-      });
-      
-      // 立即检查现有iframe
-      const iframes = document.querySelectorAll('iframe');
-      iframes.forEach(injectPrismToIframe);
-    };
-    
-    // 在CMS加载完成后启动
-    if (window.CMS) {
-      window.CMS.registerPreviewStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
-    }
-    
-    // 简化版预览组件
-    const PostPreview = createClass({
-      componentDidMount() {
-        // 尝试立即高亮
-        this.highlightCode();
-      },
-      
-      componentDidUpdate() {
-        // 更新后立即高亮
-        this.highlightCode();
-      },
-      
-      highlightCode() {
-        // 检查所有iframe
-        const iframes = document.querySelectorAll('iframe');
-        iframes.forEach(injectPrismToIframe);
-      },
-      
-      render: function() {
-        const entry = this.props.entry;
-        const title = entry.getIn(['data', 'title']) || '';
-        
-        return h('div', {},
-          h('h1', {}, title),
-          h('div', {}, this.props.widgetFor('body'))
-        );
-      }
-    });
-    
-    // 注册预览组件
-    if (window.CMS) {
-      window.CMS.registerPreviewTemplate('posts', PostPreview);
-      window.CMS.registerPreviewTemplate('pages', PostPreview);
-      
-      // 注册代码块编辑器组件
-      window.CMS.registerEditorComponent({
-        id: "code",
-        label: "代码块",
-        fields: [
-          {
-            name: "language",
-            label: "语言",
-            widget: "select",
-            options: ["javascript", "css", "html", "python", "bash", "yaml"],
-            default: "javascript"
-          },
-          {
-            name: "code",
-            label: "代码",
-            widget: "text"
-          }
-        ],
-        pattern: /^```(\w+)\n([\s\S]*?)```$/,
-        fromBlock: function(match) {
-          return {
-            language: match[1],
-            code: match[2]
-          };
-        },
-        toBlock: function(data) {
-          return "```" + data.language + "\n" + data.code + "\n```";
-        },
-        toPreview: function(data) {
-          // 确保HTML特殊字符被正确编码
-          const encodedCode = data.code
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-            
-          return (
-            '<pre class="language-' + data.language + '">' +
-              '<code class="language-' + data.language + '">' +
-                encodedCode +
-              '</code>' +
-            '</pre>'
-          );
-        }
-      });
-    }
-    
-    // CMS加载完成后启动观察器
-    document.addEventListener('DOMContentLoaded', () => {
-      // 如果CMS已加载，立即启动
-      if (window.CMS) {
-        startObserver();
-      } else {
-        // 否则等待CMS加载
-        const checkCMS = setInterval(() => {
-          if (window.CMS) {
-            clearInterval(checkCMS);
-            startObserver();
-          }
-        }, 100);
-      }
-    });
-  </script>
+  <!-- Prettier 代码格式化 -->
+  <script src="https://unpkg.com/prettier@2.8.8/standalone.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-babel.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-html.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-postcss.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-typescript.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-markdown.js"></script>
+  <script src="https://unpkg.com/prettier@2.8.8/parser-yaml.js"></script>
+  
+  <!-- 应用脚本 -->
+  <script src="js/formatter.js"></script>
+  <script src="js/highlight.js"></script>
+  <script src="js/editor-features.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
