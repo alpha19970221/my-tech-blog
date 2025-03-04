@@ -253,7 +253,7 @@ const enhanceTextarea = (textarea) => {
           // 自动添加语言标识和闭合标记
           setTimeout(() => {
             // 显示语言选择框
-            const languages = ['javascript', 'css', 'html', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx'];
+            const languages = ['javascript', 'css', 'html', 'python', 'bash', 'yaml', 'json', 'typescript', 'jsx', 'cpp', 'c', 'csharp'];
             
             // 创建语言选择框
             const langSelect = document.createElement('div');
